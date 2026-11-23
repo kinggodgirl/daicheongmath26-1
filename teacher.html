@@ -22,18 +22,14 @@ body{font-size:16px}
 #badge{font-size:14px;font-weight:700;color:var(--muted)}
 #badge.on{color:var(--o)}
 button.sm{padding:7px 12px;font-size:14px}
-.phasebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 12px;margin-bottom:12px}
-.phasebar .lbl{font-weight:900;margin-right:6px}
-.phasebar button{background:#f1efe9;color:var(--ink);font-size:16px}
-.phasebar button.sel{background:var(--acc);color:#fff}
-.cols{display:grid;grid-template-columns:270px 1fr;gap:14px;align-items:start}
+.cols{display:grid;grid-template-columns:280px 1fr;gap:14px;align-items:start}
 .side .card h3{font-size:15px;margin-bottom:8px}
-.stu{list-style:none;max-height:430px;overflow:auto}
+.stu{list-style:none;max-height:520px;overflow:auto}
 .stu li{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid #f0ece3;font-size:15px}
 .stu li .dot{width:9px;height:9px;border-radius:50%;background:#ccc;flex:none}
 .stu li .dot.on{background:var(--o)}
 .stu li .nm{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stu li .pr{font-size:12px;color:var(--muted)}
+.stu li .pr{font-size:12px;color:var(--muted);white-space:nowrap}
 .stu li .rm{background:none;color:#bbb;padding:0 4px;font-size:14px}
 .stu li.off .nm{color:#999}
 .side input,.side select{width:100%;font-size:14px;padding:7px 9px}
@@ -41,6 +37,7 @@ button.sm{padding:7px 12px;font-size:14px}
 .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .tabs button{background:#fff;color:var(--ink);border:2px solid var(--line);font-size:15px;padding:8px 14px}
 .tabs button.sel{border-color:var(--ink);background:var(--ink);color:#fff}
+.tabs button .cnt{display:inline-block;min-width:20px;border-radius:999px;background:var(--x);color:#fff;font-size:12px;padding:0 6px;margin-left:4px}
 .tool{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 .tool .info{color:var(--muted);font-weight:700}
 .grp{font-size:13px;font-weight:900;color:var(--muted);margin:14px 0 6px;letter-spacing:.5px}
@@ -48,30 +45,36 @@ button.sm{padding:7px 12px;font-size:14px}
 .prow{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:8px}
 .prow .l1{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .prow .no{font-size:22px;font-weight:900;width:30px}
-.prow .tt{font-weight:700;width:200px}
-.bar{flex:1;min-width:220px;height:26px;border-radius:8px;background:#efece5;display:flex;overflow:hidden}
+.prow .tt{font-weight:700;width:190px}
+.bar{flex:1;min-width:200px;height:26px;border-radius:8px;background:#efece5;display:flex;overflow:hidden}
 .bar>div{height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px}
 .seg-o{background:var(--o)}.seg-t{background:var(--t)}.seg-x{background:var(--x)}.seg-n{background:#cfcac0}
-.cnt{font-size:14px;color:var(--muted);white-space:nowrap}
+.cnt2{font-size:14px;color:var(--muted);white-space:nowrap}
 .names{margin-top:8px;font-size:14px;line-height:1.8}
 .names .tag{display:inline-block;background:#f4f1ea;border-radius:8px;padding:0 8px;margin:0 4px 4px 0}
 .seg{display:inline-flex;border:2px solid var(--line);border-radius:10px;overflow:hidden}
-.seg button{border-radius:0;background:#fff;color:var(--ink);padding:6px 12px;font-size:14px}
+.seg button{border-radius:0;background:#fff;color:var(--ink);padding:6px 10px;font-size:13px}
 .seg button.sel{background:var(--ink);color:#fff}
 .seg button.sel.lock{background:#777}.seg button.sel.all{background:var(--o)}
-.stat{font-size:14px;color:var(--ink);margin-top:6px;line-height:1.7}
-.stat b{font-weight:900}
+.stat{font-size:14px;margin-top:6px;line-height:1.7}
 .stat .m{color:var(--muted)}
-table.mx{border-collapse:collapse;width:100%;background:#fff;border-radius:12px;overflow:hidden;font-size:14px}
+table.mx{border-collapse:collapse;width:100%;background:#fff;font-size:14px}
 table.mx th,table.mx td{border:1px solid #eee7da;padding:5px 6px;text-align:center}
 table.mx th{background:#f7f4ee}
 table.mx td.nm{text-align:left;font-weight:700;white-space:nowrap}
 table.mx td .lv{font-size:12px;color:var(--muted)}
-table.mx td.ok{background:var(--o-soft)}
+table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft)}
+.help{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.hc{background:#fff;border:2px solid var(--line);border-radius:14px;padding:12px 14px}
+.hc.hot{border-color:var(--x)}
+.hc .nm{font-weight:900;font-size:18px}
+.hc .loc{font-size:13px;color:var(--muted);font-weight:700}
+.chip{display:inline-block;border-radius:8px;padding:2px 8px;margin:6px 6px 0 0;font-size:13px;font-weight:700}
+.chip.r{background:var(--x-soft);color:var(--x)}.chip.y{background:var(--t-soft);color:#946a00}.chip.p{background:#f1e8fb;color:#6b3fa6}.chip.g{background:#eee;color:#555}
+.okline{margin-top:14px;font-size:14px;line-height:1.9}
+.okline .tag{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:0 8px;margin:0 4px 4px 0}
 .twc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
-.twc .l1{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .twc .q{display:grid;grid-template-columns:1fr 150px;gap:12px;margin-top:6px;font-size:15px}
-.twc.closed{opacity:.6}
 .chrow{display:grid;grid-template-columns:200px 1fr 54px;gap:8px;align-items:center;margin-top:5px;font-size:15px;cursor:pointer}
 .chrow .cb{height:22px;background:#efece5;border-radius:6px;overflow:hidden}
 .chrow .cb>div{height:100%;background:#9aa7bd}
@@ -81,14 +84,15 @@ table.mx td.ok{background:var(--o-soft)}
 .pv .q{display:grid;grid-template-columns:1fr 260px;gap:14px}
 .pv ol{margin:8px 0 0 22px}
 .pv li{margin-bottom:4px}
-/* 크게 보기 */
+.blank{display:inline-block;min-width:3em;border-bottom:2px solid var(--ink)}
+.sent{margin-top:6px}
 #big{position:fixed;inset:0;background:#fff;z-index:40;display:none;padding:26px 40px;overflow:auto}
 #big.on{display:block}
-#big h2{font-size:34px;font-weight:900;margin-bottom:16px}
-#big .brow{display:flex;align-items:center;gap:18px;margin-bottom:14px;font-size:24px}
-#big .brow .no{font-size:34px;font-weight:900;width:46px}
-#big .brow .bar{height:44px;font-size:20px}
-#big .brow .bar>div{font-size:20px}
+#big h2{font-size:32px;font-weight:900;margin-bottom:16px}
+#big .brow{display:flex;align-items:center;gap:18px;margin-bottom:14px;font-size:22px}
+#big .brow .no{font-size:32px;font-weight:900;width:46px}
+#big .brow .bar{height:42px}
+#big .brow .bar>div{font-size:19px}
 #big .close{position:fixed;right:20px;top:16px}
 @media (max-width:1000px){ .cols{grid-template-columns:1fr} }
 </style>
@@ -104,20 +108,12 @@ table.mx td.ok{background:var(--o-soft)}
     <a id="demoLink" target="_blank"><button class="ghost sm">🎬 학생 화면 미리보기</button></a>
     <button class="sm acc" onclick="openBig()">📺 크게 보기</button>
   </div>
-  <div class="err muted" id="peerErr" style="color:var(--x);margin-bottom:8px"></div>
-
-  <div class="phasebar">
-    <span class="lbl">학생 화면:</span>
-    <button data-ph="wait" onclick="setPhase('wait')">대기</button>
-    <button data-ph="diag" onclick="setPhase('diag')">1. 스스로 채점</button>
-    <button data-ph="hint" onclick="setPhase('hint')">2. 힌트 보며 다시 풀기</button>
-    <button data-ph="twin" onclick="setPhase('twin')">3. 확인 문제 (책 덮고)</button>
-  </div>
+  <div class="err" id="peerErr" style="color:var(--x);margin-bottom:8px"></div>
 
   <div class="cols">
     <div class="side">
       <div class="card"><h3>학생 <span class="muted" id="stuCnt"></span></h3><ul class="stu" id="stuList"></ul></div>
-      <div class="card"><h3>✋ 전체 멈춤</h3>
+      <div class="card"><h3>✋ 전체 멈춤 <span class="muted" style="font-weight:400">(함께 볼 때)</span></h3>
         <input id="pauseMsg" type="text" maxlength="40">
         <button id="pauseBtn" style="width:100%;margin-top:6px" onclick="togglePause()">멈추기</button></div>
       <div class="card"><h3>기록</h3>
@@ -129,9 +125,10 @@ table.mx td.ok{background:var(--o-soft)}
     </div>
     <div class="main">
       <div class="tabs" id="tabs">
-        <button data-v="diag" onclick="setView('diag')">채점 결과</button>
-        <button data-v="hint" onclick="setView('hint')">힌트 현황</button>
+        <button data-v="help" onclick="setView('help')">🙋 지금 도울 학생</button>
+        <button data-v="prob" onclick="setView('prob')">문제별 현황</button>
         <button data-v="twin" onclick="setView('twin')">확인 문제</button>
+        <button data-v="bas" onclick="setView('bas')">🧱 기초 연습</button>
         <button data-v="preview" onclick="setView('preview')">힌트·풀이 미리보기</button>
       </div>
       <div id="panel"></div>
@@ -142,7 +139,7 @@ table.mx td.ok{background:var(--o-soft)}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261123.1;            // index.html 과 같은 값이어야 함
+const APP_VER=20261123.3;            // index.html 과 같은 값이어야 함
 const ID_PREFIX='kgg-unitreview-v1-';
 const PEER_OPTS={debug:0, config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}]}};
 let TURN_ON=false;
@@ -156,34 +153,36 @@ const ICE_READY=(async()=>{
   return false;
 })();
 
-const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups;
-const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t]));
+const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
+const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 function toast(m,ms=2400){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),ms);}
-const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.map(c=>[c.k,c.short]));
-const SKEY='ur-t-'+U.id;
-const DEF={code:null, phase:'wait', showAns:false, wait:60, mode:{}, twinOpen:{}, twinReveal:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'diag'};
+const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.map(c=>[c.k,c.short])), NUM='①②③④';
+const STALL_MIN=5;   // 이 시간(분) 동안 진행이 없으면 '도울 학생'에 표시
+const SKEY='ur-t2-'+U.id;
+const DEF={code:null, wait:60, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help'};
 let S=Object.assign({},DEF,LS.get(SKEY,{}));
 function save(){ LS.set(SKEY,S); }
 function newCode(){ return String(Math.floor(1000+Math.random()*9000)); }
-if(!S.code){ S.code=newCode(); save(); }
-const students=new Map();   // key → {conn,name,dev,online,seen,ver}
-let peer=null, OPEN={};     // OPEN: 펼친 이름 목록
-$('ttl').textContent='교사용 · '+U.title; document.title='교사용 · '+U.title;
-$('pauseMsg').value=S.pauseMsg;
+if(!S.code){ S.code=LS.get('ur-t-'+U.id,{}).code||newCode(); save(); }
+const students=new Map();
+let peer=null, OPEN={};
+$('ttl').textContent='교사용 · '+U.title; document.title='교사용 · '+U.title; $('pauseMsg').value=S.pauseMsg;
 
 /* ---------- 장부 ---------- */
-function rec(name){ return S.recs[name]||(S.recs[name]={diag:{},hint:{},solved:{},twin:{}}); }
+function blank(){ return {diag:{},seen:{},hint:{},solved:{},twin:{},bas:{},loc:'',progT:0}; }
+function rec(name){ if(!S.recs[name]) S.recs[name]=blank(); const r=S.recs[name], b=blank(); for(const k in b) if(r[k]==null) r[k]=b[k]; return r; }
+function R(name){ return S.recs[name]||blank(); }
 function roster(){ const set=new Set(Object.keys(S.recs)); for(const s of students.values()) if(s.online&&s.dev) set.add(s.name); return [...set].sort((a,b)=>a.localeCompare(b,'ko',{numeric:true})); }
 function onlineNames(){ const set=new Set(); for(const s of students.values()) if(s.online&&s.dev) set.add(s.name); return set; }
-function modeOf(pid){ return S.mode[pid]||'hint'; }
-function cfgMsg(){ return {t:'cfg',phase:S.phase,showAns:S.showAns,wait:S.wait,mode:S.mode,twinOpen:S.twinOpen,twinReveal:S.twinReveal}; }
+function modeOf(pid){ return S.mode[pid]||'all'; }
+function cfgMsg(){ return {t:'cfg',wait:S.wait,mode:S.mode}; }
 function sendTo(s,o){ try{ s.conn.send(o); }catch(e){} }
 function broadcast(o){ for(const s of students.values()) if(s.online) sendTo(s,o); }
 function pushCfg(){ save(); broadcast(cfgMsg()); render(); }
-function sendMine(name){ for(const s of students.values()) if(s.online&&s.name===name) sendTo(s,{t:'mine',rec:S.recs[name]}); }
+function sendMine(name){ const r=S.recs[name]; if(!r) return; const {loc,progT,...mine}=r; for(const s of students.values()) if(s.online&&s.name===name) sendTo(s,{t:'mine',rec:mine}); }
 
 /* ---------- 연결 ---------- */
 function studentURL(){ return location.href.replace(/[?#].*$/,'').replace(/teacher\.html$/,'')+'?c='+S.code; }
@@ -197,28 +196,21 @@ function openPeer(attempt=0){
   peer.on('open',()=>{ $('badge').textContent='● 학생 연결 받는 중'+(TURN_ON?' · 중계 서버 ✔':''); $('badge').classList.add('on'); });
   peer.on('connection',c=>{
     c._key='tmp-'+c.peer;
-    c.on('open',()=>{
-      students.set(c._key,{conn:c,name:'(이름 없음)',dev:null,online:true,seen:Date.now()});
-      sendTo({conn:c},cfgMsg()); sendTo({conn:c},{t:'pause',on:S.paused,msg:S.pauseMsg});
-      render();
-    });
+    c.on('open',()=>{ students.set(c._key,{conn:c,name:'(이름 없음)',dev:null,online:true,seen:Date.now()}); sendTo({conn:c},cfgMsg()); sendTo({conn:c},{t:'pause',on:S.paused,msg:S.pauseMsg}); render(); });
     c.on('data',d=>onData(c,d));
     c.on('close',()=>{ const s=students.get(c._key); if(s&&s.conn===c){ s.online=false; render(); } });
   });
   peer.on('error',err=>{
-    if(err.type==='unavailable-id'){ $('badge').textContent='코드 사용 중'; $('badge').classList.remove('on');
-      $('peerErr').innerHTML='이 수업 코드가 다른 창에서 이미 열려 있어요. 그 창을 닫거나 [새 수업 코드 만들기]를 누르세요.'; return; }
-    if(['network','server-error','socket-error','socket-closed'].includes(err.type)){
-      $('badge').textContent='연결 끊김 · 다시 시도 중'; $('badge').classList.remove('on');
-      setTimeout(()=>openPeer(attempt+1),Math.min(10000,2000*(attempt+1)));
-    }
+    if(err.type==='unavailable-id'){ $('badge').textContent='코드 사용 중'; $('badge').classList.remove('on'); $('peerErr').innerHTML='이 수업 코드가 다른 창에서 이미 열려 있어요. 그 창을 닫거나 [새 수업 코드 만들기]를 누르세요.'; return; }
+    if(['network','server-error','socket-error','socket-closed'].includes(err.type)){ $('badge').textContent='연결 끊김 · 다시 시도 중'; $('badge').classList.remove('on'); setTimeout(()=>openPeer(attempt+1),Math.min(10000,2000*(attempt+1))); }
   });
   peer.on('disconnected',()=>{ try{peer.reconnect();}catch(e){} });
 }
-// 12초 동안 소식이 없으면 끊긴 것으로 표시
-setInterval(()=>{ let ch=false; for(const s of students.values()){ if(s.online&&Date.now()-s.seen>12000){ s.online=false; ch=true; try{s.conn.close();}catch(e){} } } if(ch) render(); },3000);
+// 끊김 확인 + '몇 분째 진행 없음' 갱신
+setInterval(()=>{ for(const s of students.values()){ if(s.online&&Date.now()-s.seen>12000){ s.online=false; try{s.conn.close();}catch(e){} } } render(); },5000);
 
-const okPid=pid=>!!PBY[pid], okTid=tid=>!!TBY[tid];
+const okPid=pid=>!!PBY[pid], okTid=tid=>!!TBY[tid], okB=k=>!!BBY[k];
+function progress(r){ r.progT=Date.now(); }
 function onData(c,d){
   if(!d||typeof d!=='object') return;
   const s=students.get(c._key); if(!s||s.conn!==c) return;
@@ -226,186 +218,184 @@ function onData(c,d){
   if(d.t==='ping'){ sendTo(s,{t:'pong'}); return; }
   if(d.t==='hi'){
     const dev=String(d.dev||'').slice(0,16);
-    if(dev && c._key!=='dev-'+dev){ const key='dev-'+dev, old=students.get(key); if(old&&old.conn!==c){ try{old.conn.close();}catch(e){} } students.delete(c._key); c._key=key; students.set(key,s); }
+    if(dev&&c._key!=='dev-'+dev){ const key='dev-'+dev, old=students.get(key); if(old&&old.conn!==c){ try{old.conn.close();}catch(e){} } students.delete(c._key); c._key=key; students.set(key,s); }
     s.dev=dev; s.name=String(d.name||'(이름 없음)').trim().slice(0,10)||'(이름 없음)'; s.ver=+d.ver||0;
-    sendTo(s,{t:'ver',v:APP_VER}); rec(s.name); save(); render(); return;
+    sendTo(s,{t:'ver',v:APP_VER}); const r=rec(s.name); if(!r.progT) progress(r); save(); render(); return;
   }
   if(!s.dev) return;
   const r=rec(s.name);
-  if(d.t==='sync'){ mergeRec(r,d.rec||{}); save(); sendMine(s.name); }
-  else if(d.t==='diag' && okPid(d.pid)){ if(['o','t','x'].includes(d.v)) r.diag[d.pid]=d.v; else delete r.diag[d.pid]; save(); }
-  else if(d.t==='hint' && okPid(d.pid)){
-    const lv=Math.max(0,Math.min(PBY[d.pid].hints.length, +d.lv||0)), h=r.hint[d.pid]||{};
-    r.hint[d.pid]={lv:Math.max(h.lv||0,lv), sol:!!(h.sol || (d.sol && modeOf(d.pid)==='all'))}; save();
+  switch(d.t){
+    case 'sync': mergeRec(r,d.rec||{}); sendMine(s.name); break;
+    case 'loc': r.loc=String(d.v||'').slice(0,30); break;
+    case 'seen': if(okPid(d.pid)) r.seen[d.pid]=true; break;
+    case 'diag': if(okPid(d.pid)){ if(['o','t','x'].includes(d.v)) r.diag[d.pid]=d.v; else delete r.diag[d.pid]; progress(r); } break;
+    case 'hint': if(okPid(d.pid)){ const lv=Math.max(0,Math.min(PBY[d.pid].hints.length,+d.lv||0)), h=r.hint[d.pid]||{};
+      r.hint[d.pid]={lv:Math.max(h.lv||0,lv), sol:!!(h.sol||(d.sol&&modeOf(d.pid)==='all'))}; progress(r); } break;
+    case 'solved': if(okPid(d.pid)){ if(d.on){ const h=r.hint[d.pid]||{}; r.solved[d.pid]={lv:h.lv||0,sol:!!h.sol,cause:CN[d.cause]?d.cause:null}; } else delete r.solved[d.pid]; progress(r); } break;
+    case 'twinOpen': if(okTid(d.tid)){ r.twin[d.tid]=Object.assign({},r.twin[d.tid],{open:true}); progress(r); } break;
+    case 'twinAns': if(okTid(d.tid)){ const a=+d.a, cur=r.twin[d.tid]||{}; if(cur.a==null && a>=0 && a<TBY[d.tid].ch.length){ r.twin[d.tid]=Object.assign({},cur,{open:true,a}); progress(r); } } break;
+    case 'twinCause': if(okTid(d.tid)&&CN[d.cause]&&r.twin[d.tid]&&r.twin[d.tid].a!=null) r.twin[d.tid].cause=d.cause; break;
+    case 'bas': if(okB(d.type)){ const b=Object.assign({n:0,ok:0,streak:0,star:false,recent:[],ws:{}},r.bas[d.type]); const ok=!!d.ok;
+      b.n++; if(ok){ b.ok++; b.streak++; } else { b.streak=0; const w=Math.max(0,Math.min(5,+d.ws||0)); b.ws=Object.assign({},b.ws); b.ws[w]=(b.ws[w]||0)+1; }
+      if(b.streak>=3) b.star=true; b.recent=(b.recent||[]).concat([ok]).slice(-5); r.bas[d.type]=b; progress(r); } break;
   }
-  else if(d.t==='solved' && okPid(d.pid)){
-    if(d.on){ const cause=CN[d.cause]?d.cause:null; const h=r.hint[d.pid]||{}; r.solved[d.pid]={lv:h.lv||0,sol:!!h.sol,cause}; } else delete r.solved[d.pid]; save();
-  }
-  else if(d.t==='twinAns' && okTid(d.tid)){ const a=+d.a; if(S.twinOpen[d.tid] && !S.twinReveal[d.tid] && a>=0 && a<TBY[d.tid].ch.length){ r.twin[d.tid]=Object.assign({},r.twin[d.tid],{a}); save(); } }
-  else if(d.t==='twinCause' && okTid(d.tid)){ if(CN[d.cause] && r.twin[d.tid]){ r.twin[d.tid].cause=d.cause; save(); } }
-  render();
+  save(); render();
 }
-/* 학생 기기 기록과 장부 합치기 (새로고침·기기 바꿈 대비) */
 function mergeRec(r,x){
-  for(const pid in (x.diag||{})) if(okPid(pid)&&['o','t','x'].includes(x.diag[pid])) r.diag[pid]=x.diag[pid];
+  for(const pid in (x.diag||{})) if(okPid(pid)&&['o','t','x'].includes(x.diag[pid])&&!r.diag[pid]) r.diag[pid]=x.diag[pid];
+  for(const pid in (x.seen||{})) if(okPid(pid)) r.seen[pid]=true;
   for(const pid in (x.hint||{})) if(okPid(pid)){ const h=r.hint[pid]||{}, y=x.hint[pid]||{}; r.hint[pid]={lv:Math.min(PBY[pid].hints.length,Math.max(h.lv||0,+y.lv||0)), sol:!!(h.sol||y.sol)}; }
   for(const pid in (x.solved||{})) if(okPid(pid)&&!r.solved[pid]){ const y=x.solved[pid]||{}; r.solved[pid]={lv:+y.lv||0,sol:!!y.sol,cause:CN[y.cause]?y.cause:null}; }
-  for(const tid in (x.twin||{})) if(okTid(tid)){ const y=x.twin[tid]||{}, cur=r.twin[tid]||{}; const a=+y.a;
-    if(cur.a==null && y.a!=null && !S.twinReveal[tid] && a>=0 && a<TBY[tid].ch.length) cur.a=a;
-    if(!cur.cause && CN[y.cause]) cur.cause=y.cause; if(cur.a!=null) r.twin[tid]=cur; }
+  for(const tid in (x.twin||{})) if(okTid(tid)){ const y=x.twin[tid]||{}, cur=Object.assign({},r.twin[tid]); const a=+y.a;
+    if(y.open) cur.open=true; if(cur.a==null&&y.a!=null&&a>=0&&a<TBY[tid].ch.length) cur.a=a; if(!cur.cause&&CN[y.cause]) cur.cause=y.cause;
+    if(cur.open||cur.a!=null) r.twin[tid]=cur; }
+  for(const k in (x.bas||{})) if(okB(k)){ const y=x.bas[k]||{}, cur=r.bas[k]; if(!cur || (+y.n||0)>cur.n) r.bas[k]={n:+y.n||0,ok:+y.ok||0,streak:+y.streak||0,star:!!y.star,recent:Array.isArray(y.recent)?y.recent.slice(-5).map(Boolean):[],ws:(cur&&cur.ws)||{}}; }
 }
 
 /* ---------- 조작 ---------- */
-function setPhase(ph){ S.phase=ph; if(ph!=='wait') S.view=ph; pushCfg(); }
 function setView(v){ S.view=v; save(); render(); }
 function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim()||'선생님을 봐 주세요'; save(); broadcast({t:'pause',on:S.paused,msg:S.pauseMsg}); render(); }
 function setMode(pid,m){ S.mode[pid]=m; pushCfg(); }
 function setAllMode(m){ for(const p of P) S.mode[p.id]=m; pushCfg(); }
-function toggleAns(){ S.showAns=!S.showAns; pushCfg(); }
 function setWait(v){ S.wait=+v; pushCfg(); }
-function twinOpen(tid,on){ S.twinOpen[tid]=on; pushCfg(); }
-function twinAll(on){ for(const t of TW) S.twinOpen[t.id]=on; pushCfg(); }
-function twinReveal(tid){ S.twinReveal[tid]=!S.twinReveal[tid]; pushCfg(); }
 function toggleNames(k){ OPEN[k]=!OPEN[k]; render(); }
 function removeName(n){ if(!confirm(`'${n}' 학생의 기록을 지울까요?`)) return; delete S.recs[n]; save(); render(); }
+
+/* ---------- 분석 ---------- */
+function flagsOf(n){
+  const r=R(n), f=[];
+  for(const p of P){ const d=r.diag[p.id], h=r.hint[p.id]||{}, sv=r.solved[p.id];
+    if((d==='t'||d==='x') && !sv && (h.lv||0)>=p.hints.length) f.push({c:'r', t:`${p.no} 힌트 다 보고도 못 품${h.sol?' (풀이 봄)':''}`, w:3}); }
+  for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok) f.push({c:'y', t:`확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${t.why[x.a]||''}`, w:2}); }
+  for(const b of BT){ const x=r.bas[b.k]; if(x&&x.recent&&x.recent.length>=3&&x.recent.slice(-3).every(v=>!v)) f.push({c:'p', t:`기초 ${b.name}: 3번 연속 틀림`, w:3}); }
+  if(onlineNames().has(n) && r.progT && Date.now()-r.progT>STALL_MIN*60000) f.push({c:'g', t:`${Math.floor((Date.now()-r.progT)/60000)}분째 진행 없음`, w:1});
+  return f;
+}
+function diagCounts(p,names){ const c={o:[],t:[],x:[],n:[]}; for(const n of names){ const m=R(n).diag[p.id]; (c[m]||c.n).push(n); } return c; }
+function barHTML(c,total){ const w=k=>total?c[k].length/total*100:0; return `<div class="bar">${['o','t','x','n'].map(k=>c[k].length?`<div class="seg-${k}" style="width:${w(k)}%">${k==='n'?'':MK[k]+' '}${c[k].length}</div>`:'').join('')}</div>`; }
+function tags(arr){ return arr.length? arr.map(n=>`<span class="tag">${esc(n)}</span>`).join('') : '<span class="muted">없음</span>'; }
+function twinStats(t,names){ const by=t.ch.map(()=>[]), causes={}; let sub=0, open=0;
+  for(const n of names){ const x=R(n).twin[t.id]; if(x&&x.open) open++; if(x&&x.a!=null){ by[x.a].push(n); sub++; if(x.a!==t.ok&&x.cause) causes[x.cause]=(causes[x.cause]||0)+1; } }
+  return {by,causes,sub,open}; }
 
 /* ---------- 그리기 ---------- */
 let rT=null;
 function render(){ clearTimeout(rT); rT=setTimeout(renderNow,60); }
 function renderNow(){
   showCode();
-  document.querySelectorAll('.phasebar button').forEach(b=>b.classList.toggle('sel',b.dataset.ph===S.phase));
+  const names=roster(), hot=names.filter(n=>flagsOf(n).some(f=>f.w>=2)).length;
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('sel',b.dataset.v===S.view));
+  document.querySelector('#tabs button[data-v=help]').innerHTML='🙋 지금 도울 학생'+(hot?`<span class="cnt">${hot}</span>`:'');
   $('pauseBtn').textContent=S.paused?'▶ 멈춤 풀기':'✋ 멈추기'; $('pauseBtn').style.background=S.paused?'var(--x)':'';
   renderStudents();
   const v=S.view;
-  $('panel').innerHTML= v==='diag'?panelDiag() : v==='hint'?panelHint() : v==='twin'?panelTwin() : panelPreview();
+  if(v!=='preview' || !$('panel').dataset.pv){ $('panel').innerHTML= v==='prob'?panelProb() : v==='twin'?panelTwin() : v==='bas'?panelBas() : v==='preview'?panelPreview() : panelHelp(); }
+  $('panel').dataset.pv = v==='preview' ? '1' : '';
   if($('big').classList.contains('on')) renderBig();
-}
-function progressOf(n){
-  const r=S.recs[n]; if(!r) return '';
-  if(S.phase==='diag') return `채점 ${Object.keys(r.diag).length}/${P.length}`;
-  if(S.phase==='hint') return `해결 ${Object.keys(r.solved).length} · 힌트 ${Object.values(r.hint).reduce((a,h)=>a+(h.lv||0),0)}개`;
-  if(S.phase==='twin'){ const open=TW.filter(t=>S.twinOpen[t.id]); return `제출 ${open.filter(t=>r.twin[t.id]&&r.twin[t.id].a!=null).length}/${open.length}`; }
-  return '';
 }
 function renderStudents(){
   const on=onlineNames(), names=roster();
   const vers=[...students.values()].filter(s=>s.online&&s.dev&&s.ver&&s.ver!==APP_VER).length;
   $('stuCnt').textContent=`접속 ${on.size}명`+(vers?` · ⚠ 버전 다른 화면 ${vers}`:'');
-  $('stuList').innerHTML= names.length? names.map(n=>`<li class="${on.has(n)?'':'off'}"><span class="dot ${on.has(n)?'on':''}"></span><span class="nm">${esc(n)}</span><span class="pr">${on.has(n)?progressOf(n):'끊김'}</span>${on.has(n)?'':`<button class="rm" title="기록 지우기" onclick="removeName('${esc(n).replace(/'/g,"\\'")}')">✕</button>`}</li>`).join('')
+  $('stuList').innerHTML= names.length? names.map(n=>`<li class="${on.has(n)?'':'off'}"><span class="dot ${on.has(n)?'on':''}"></span><span class="nm">${esc(n)}</span><span class="pr">${on.has(n)?esc(R(n).loc||''):'끊김'}</span>${on.has(n)?'':`<button class="rm" title="기록 지우기" onclick="removeName('${esc(n).replace(/'/g,"\\'")}')">✕</button>`}</li>`).join('')
     : '<li class="muted">아직 들어온 학생이 없어요. 학생 주소나 수업 코드를 알려 주세요.</li>';
 }
-function tags(arr){ return arr.length? arr.map(n=>`<span class="tag">${esc(n)}</span>`).join('') : '<span class="muted">없음</span>'; }
-function grouped(fn){ let h=''; for(const gk in G){ const ps=P.filter(p=>p.group===gk); if(!ps.length) continue; h+=`<div class="grp"><b>${G[gk].name}</b> · ${G[gk].desc}</div>`+ps.map(fn).join(''); } return h; }
-function diagCounts(p,names){ const c={o:[],t:[],x:[],n:[]}; for(const n of names){ const m=(S.recs[n]||{diag:{}}).diag[p.id]; (c[m]||c.n).push(n); } return c; }
-function barHTML(c,total){ const w=k=>total?c[k].length/total*100:0; return `<div class="bar">${['o','t','x','n'].map(k=>c[k].length?`<div class="seg-${k}" style="width:${w(k)}%">${k==='n'?'':MK[k]+' '}${c[k].length}</div>`:'').join('')}</div>`; }
-
-function panelDiag(){
-  const names=roster(), N=names.length;
-  const done=names.filter(n=>Object.keys((S.recs[n]||{diag:{}}).diag).length===P.length).length;
-  let h=`<div class="tool"><button class="${S.showAns?'acc':'ghost'} sm" onclick="toggleAns()">${S.showAns?'✔ 학생 화면에 정답 보이는 중':'학생 화면에 정답 공개하기'}</button>
-    <span class="info">모두 고른 학생 ${done} / ${N}명</span><span class="muted">막대를 누르면 이름이 보여요 · ○맞음 △막힘 ×틀림 · 회색=아직</span></div>`;
-  h+=grouped(p=>{ const c=diagCounts(p,names), k='d'+p.id;
-    return `<div class="prow"><div class="l1" style="cursor:pointer" onclick="toggleNames('${k}')"><span class="no">${p.no}</span><span class="tt">${p.title}</span>${barHTML(c,N)}
-      <span class="cnt">△+× <b>${c.t.length+c.x.length}</b>명</span></div>
-      ${OPEN[k]?`<div class="names"><span class="mk t">△</span> ${tags(c.t)}<br><span class="mk x">×</span> ${tags(c.x)}<br><span class="mk o">○</span> ${tags(c.o)}<br><span class="muted">아직:</span> ${tags(c.n)}</div>`:''}</div>`; });
+function summaryOf(n){ const r=R(n); const solved=P.filter(p=>r.diag[p.id]==='o'||r.solved[p.id]).length; const tw=TW.filter(t=>r.twin[t.id]&&r.twin[t.id].a!=null); const ok=tw.filter(t=>r.twin[t.id].a===t.ok).length; const st=BT.filter(b=>r.bas[b.k]&&r.bas[b.k].star).length;
+  return `해결 ${solved}/${P.length} · 확인 ⭕${ok}/${tw.length}${Object.keys(r.bas).length?` · 기초 ⭐${st}`:''}`; }
+function panelHelp(){
+  const names=roster(), on=onlineNames();
+  const rows=names.map(n=>({n,f:flagsOf(n)})).filter(x=>x.f.length).sort((a,b)=>b.f.reduce((s,x)=>s+x.w,0)-a.f.reduce((s,x)=>s+x.w,0));
+  let h=`<div class="tool"><span class="muted">힌트를 다 보고도 못 푼 학생, 확인 문제를 틀린 학생, 기초 연습에서 연속으로 틀리는 학생, ${STALL_MIN}분 넘게 진행이 없는 학생이 모여요. 학생이 해결하면 자동으로 사라져요.</span></div>`;
+  h+= rows.length? `<div class="help">${rows.map(({n,f})=>`<div class="hc ${f.some(x=>x.w>=3)?'hot':''}"><div class="nm">${esc(n)} ${on.has(n)?'':'<span class="muted" style="font-size:13px">(끊김)</span>'}</div>
+      <div class="loc">지금: ${esc(R(n).loc||'-')} · ${summaryOf(n)}</div>${f.map(x=>`<span class="chip ${x.c}">${x.t}</span>`).join('')}</div>`).join('')}</div>`
+    : `<div class="card muted" style="text-align:center;padding:30px">지금은 도움이 필요한 학생이 없어요 🙂</div>`;
+  const fine=names.filter(n=>!rows.some(x=>x.n===n));
+  if(fine.length) h+=`<div class="okline"><b>순조롭게 진행 중</b><br>${fine.map(n=>`<span class="tag">${esc(n)} <span class="muted">· ${esc(R(n).loc||'')} · ${summaryOf(n)}</span></span>`).join('')}</div>`;
   return h;
 }
-function panelHint(){
-  const names=roster();
+function grouped(fn){ let h=''; for(const gk in G){ const ps=P.filter(p=>p.group===gk); if(!ps.length) continue; h+=`<div class="grp"><b>${G[gk].name}</b> · ${G[gk].desc}</div>`+ps.map(fn).join(''); } return h; }
+function panelProb(){
+  const names=roster(), N=names.length;
   let h=`<div class="tool"><span class="info">다음 힌트까지 기다리는 시간</span>
     <select onchange="setWait(this.value)">${[0,30,60,90,120,180].map(v=>`<option value="${v}" ${S.wait==v?'selected':''}>${v?v+'초':'바로'}</option>`).join('')}</select>
-    <button class="ghost sm" onclick="setAllMode('hint')">모두 '힌트만'</button><button class="ghost sm" onclick="setAllMode('all')">모두 '풀이까지'</button>
-    <span class="muted">풀이는 '풀이까지'로 바꾼 문제만 학생이 열 수 있어요</span></div>`;
+    <button class="ghost sm" onclick="setAllMode('all')">모두 '풀이 허용'</button><button class="ghost sm" onclick="setAllMode('hint')">모두 '풀이 막기'</button>
+    <span class="muted">풀이 허용: 힌트를 다 본 학생은 풀이를 열 수 있음 · 잠금: 함께 볼 문제의 힌트를 닫음</span></div>`;
   h+=grouped(p=>{
-    const md=modeOf(p.id), n=p.hints.length, c=diagCounts(p,names);
-    const stuck=[...c.t,...c.x], solved=names.filter(x=>(S.recs[x]||{solved:{}}).solved[p.id]);
-    const byLv=Array.from({length:n+1},()=>[]); let solSeen=[];
-    for(const x of names){ const hh=(S.recs[x]||{hint:{}}).hint[p.id]; byLv[hh?hh.lv:0].push(x); if(hh&&hh.sol) solSeen.push(x); }
-    const sByLv=Array.from({length:n+1},()=>0); const causes={};
-    for(const x of solved){ const sv=S.recs[x].solved[p.id]; if(sv.sol) continue; sByLv[Math.min(n,sv.lv||0)]++; if(sv.cause) causes[sv.cause]=(causes[sv.cause]||0)+1; }
-    const notSolvedStuck=stuck.filter(x=>!solved.includes(x)), k='h'+p.id;
+    const md=modeOf(p.id), c=diagCounts(p,names), stuck=[...c.t,...c.x];
+    const solved=names.filter(x=>R(x).solved[p.id]), notYet=stuck.filter(x=>!R(x).solved[p.id]);
+    const causes={}; let byHint=0, bySol=0; for(const x of solved){ const sv=R(x).solved[p.id]; if(sv.sol) bySol++; else byHint++; if(sv.cause) causes[sv.cause]=(causes[sv.cause]||0)+1; }
+    const t=TOF[p.id], ts=twinStats(t,names), right=ts.by[t.ok].length, k='p'+p.id;
     return `<div class="prow"><div class="l1"><span class="no">${p.no}</span><span class="tt">${p.title}</span>
-      <span class="seg">${[['lock','잠금'],['hint','힌트만'],['all','풀이까지']].map(([m,l])=>`<button class="${md===m?'sel '+m:''}" onclick="setMode('${p.id}','${m}')">${l}</button>`).join('')}</span>
-      <span class="cnt" style="cursor:pointer" onclick="toggleNames('${k}')">처음에 막힌(△×) <b>${stuck.length}</b>명 중 아직 못 푼 <b style="color:var(--x)">${notSolvedStuck.length}</b>명 ▾</span></div>
-      <div class="stat">✔ 해결 <b>${solved.length}</b>명${(()=>{ const parts=[]; if(sByLv[0]) parts.push(`힌트 없이 ${sByLv[0]}`); sByLv.forEach((v,i)=>{ if(i&&v) parts.push(`힌트${i}까지 ${v}`); }); const ps=solved.length-sByLv.reduce((a,b)=>a+b,0); if(ps) parts.push(`풀이 보고 ${ps}`); return parts.length?` <span class="m">(${parts.join(' · ')})</span>`:''; })()}
-      ${(()=>{ const parts=byLv.map((a,i)=>i&&a.length?`H${i} <b>${a.length}</b>`:'').filter(Boolean); if(solSeen.length) parts.push(`풀이 <b>${solSeen.length}</b>`); return parts.length?` &nbsp;|&nbsp; 힌트 연 학생: ${parts.join(' · ')}`:''; })()}
-      ${Object.keys(causes).length?` &nbsp;|&nbsp; 막힌 이유: ${Object.entries(causes).map(([c,v])=>`${CN[c]} <b>${v}</b>`).join(' · ')}`:''}</div>
-      ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생(△×):</b> ${tags(notSolvedStuck.map(x=>{const hh=(S.recs[x].hint||{})[p.id]; return x+(hh&&hh.lv?` (H${hh.lv})`:'');}))}</div>`:''}</div>`; });
-  // 학생별 표
-  h+=`<div class="grp" style="margin-top:20px"><b>학생별 현황</b> · 기호=처음 채점, 숫자=연 힌트 수, ✔=해결</div>`;
-  h+=`<table class="mx"><tr><th>학생</th>${P.map(p=>`<th>${p.no}</th>`).join('')}</tr>`+
-    names.map(n=>{ const r=S.recs[n]||{diag:{},hint:{},solved:{}}; return `<tr><td class="nm">${esc(n)}</td>${P.map(p=>{ const d=r.diag[p.id], hh=r.hint[p.id], sv=r.solved[p.id];
-      return `<td class="${sv?'ok':''}">${d?`<span class="mk ${d}">${MK[d]}</span>`:'·'} <span class="lv">${hh&&hh.lv?'H'+hh.lv:''}${hh&&hh.sol?'풀':''}</span>${sv?' ✔':''}</td>`; }).join('')}</tr>`; }).join('')+`</table>`;
+      <span class="seg">${[['lock','잠금'],['hint','풀이 막기'],['all','풀이 허용']].map(([m,l])=>`<button class="${md===m?'sel '+m:''}" onclick="setMode('${p.id}','${m}')">${l}</button>`).join('')}</span>
+      ${barHTML(c,N)}</div>
+      <div class="stat" style="cursor:pointer" onclick="toggleNames('${k}')">처음에 막힘(△×) <b>${stuck.length}</b> → 다시 풀어 해결 <b>${solved.length}</b>${solved.length?` <span class="m">(힌트로 ${byHint} · 풀이 보고 ${bySol})</span>`:''} · 아직 <b style="color:var(--x)">${notYet.length}</b>
+        &nbsp;|&nbsp; 확인 문제 <b>${right}</b>/${ts.sub} 정답${ts.open-ts.sub>0?` <span class="m">(푸는 중 ${ts.open-ts.sub})</span>`:''}
+        ${Object.keys(causes).length?` &nbsp;|&nbsp; 막힌 이유: ${Object.entries(causes).map(([cc,v])=>`${CN[cc]} <b>${v}</b>`).join(' · ')}`:''} <span class="m">▾</span></div>
+      ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생:</b> ${tags(notYet.map(x=>{const hh=R(x).hint[p.id]; return x+(hh&&hh.lv?` (힌트${hh.lv})`:'');}))}<br><b>확인 문제 틀림:</b> ${tags(names.filter(x=>{const y=R(x).twin[t.id]; return y&&y.a!=null&&y.a!==t.ok;}))}</div>`:''}</div>`; });
+  h+=`<div class="grp" style="margin-top:20px"><b>학생별 현황</b> · 기호=채점, H=연 힌트 수, ✔=다시 풀어 해결, ⭕❌=확인 문제</div>`;
+  h+=`<table class="mx"><tr><th>학생</th>${P.map(p=>`<th>${p.no}</th>`).join('')}<th>기초 ⭐</th></tr>`+names.map(n=>{ const r=R(n);
+    return `<tr><td class="nm">${esc(n)}</td>${P.map(p=>{ const d=r.diag[p.id], hh=r.hint[p.id], sv=r.solved[p.id], x=r.twin[TOF[p.id].id], tw=x&&x.a!=null?(x.a===TOF[p.id].ok?'⭕':'❌'):(x&&x.open?'…':'');
+      return `<td class="${tw==='⭕'?'ok':tw==='❌'?'bad':''}">${d?`<span class="mk ${d}">${MK[d]}</span>`:'·'} <span class="lv">${hh&&hh.lv?'H'+hh.lv:''}${hh&&hh.sol?'풀':''}</span>${sv?'✔':''}${tw}</td>`; }).join('')}
+      <td>${BT.filter(b=>r.bas[b.k]&&r.bas[b.k].star).map(b=>b.k).join(' ')}</td></tr>`; }).join('')+`</table>`;
   return h;
 }
-function twinStats(t,names){
-  const by=t.ch.map(()=>[]), causes={}; let sub=0;
-  for(const n of names){ const x=(S.recs[n]||{twin:{}}).twin[t.id]; if(x&&x.a!=null){ by[x.a].push(n); sub++; if(x.a!==t.ok&&x.cause) causes[x.cause]=(causes[x.cause]||0)+1; } }
-  return {by,causes,sub};
-}
 function panelTwin(){
-  const names=roster(), on=onlineNames();
-  let h=`<div class="tool"><button class="ghost sm" onclick="twinAll(true)">모두 열기</button><button class="ghost sm" onclick="twinAll(false)">모두 닫기</button>
-    <span class="muted">열린 문제만 학생 화면에 보여요. 정답을 공개하기 전까지 학생은 답을 바꿀 수 있어요.</span></div>`;
-  for(const t of TW){
-    const of=PBY[t.of], st=twinStats(t,names), open=!!S.twinOpen[t.id], rev=!!S.twinReveal[t.id], k='t'+t.id;
-    const right=st.by[t.ok].length;
-    h+=`<div class="twc ${open?'':'closed'}"><div class="l1"><b style="font-size:18px">확인 ${of?of.no:''}</b><span class="muted">(${of?of.no+' '+of.title:''}와 쌍둥이)</span>
-      <button class="sm ${open?'':'acc'}" onclick="twinOpen('${t.id}',${!open})">${open?'닫기':'열기'}</button>
-      ${open?`<button class="sm ${rev?'ghost':''}" style="${rev?'':'background:var(--o)'}" onclick="twinReveal('${t.id}')">${rev?'정답 공개 취소':'정답 공개'}</button>`:''}
-      <span class="cnt">제출 <b>${st.sub}</b> / 접속 ${on.size} · 정답률 <b>${st.sub?Math.round(right/st.sub*100):0}%</b></span></div>
+  const names=roster();
+  let h=`<div class="tool"><span class="muted">학생은 채점에서 ○를 골랐거나 다시 풀어 해결한 뒤에 확인 문제를 풀 수 있어요. 제출은 한 번, 제출하면 바로 정답·풀이가 보여요.</span></div>`;
+  for(const t of TW){ const of=PBY[t.of], st=twinStats(t,names), right=st.by[t.ok].length, k='t'+t.id;
+    h+=`<div class="twc"><div><b style="font-size:18px">확인 ${of.no}</b> <span class="muted">(${of.title}와 쌍둥이)</span> <span class="cnt2">· 제출 <b>${st.sub}</b>${st.open-st.sub>0?` · 푸는 중 ${st.open-st.sub}`:''} · 정답률 <b>${st.sub?Math.round(right/st.sub*100):0}%</b></span></div>
       <div class="q"><div class="ptext" style="font-weight:700">${t.text}</div><div>${t.fig?t.fig():''}</div></div>
-      ${t.ch.map((c,i)=>`<div class="chrow ${i===t.ok?'ok':''}" onclick="toggleNames('${k}')"><span>${'①②③④'[i]} ${c} ${i===t.ok?'✔':''}</span><div class="cb"><div style="width:${st.sub?st.by[i].length/st.sub*100:0}%"></div></div><b>${st.by[i].length}명</b>${t.why[i]?`<span class="why">→ ${t.why[i]}</span>`:''}</div>`).join('')}
+      ${t.ch.map((c,i)=>`<div class="chrow ${i===t.ok?'ok':''}" onclick="toggleNames('${k}')"><span>${NUM[i]} ${c} ${i===t.ok?'✔':''}</span><div class="cb"><div style="width:${st.sub?st.by[i].length/st.sub*100:0}%"></div></div><b>${st.by[i].length}명</b>${t.why[i]?`<span class="why">→ ${t.why[i]}</span>`:''}</div>`).join('')}
       ${Object.keys(st.causes).length?`<div class="stat">틀린 학생이 고른 이유: ${Object.entries(st.causes).map(([c,v])=>`${CN[c]} <b>${v}</b>`).join(' · ')}</div>`:''}
-      ${OPEN[k]?`<div class="names">${t.ch.map((c,i)=>`<b>${'①②③④'[i]}</b> ${tags(st.by[i])}`).join('<br>')}<br><b>미제출</b> ${tags(names.filter(n=>!st.by.some(a=>a.includes(n))))}</div>`:''}
-    </div>`;
-  }
+      ${OPEN[k]?`<div class="names">${t.ch.map((c,i)=>`<b>${NUM[i]}</b> ${tags(st.by[i])}`).join('<br>')}</div>`:''}</div>`; }
+  return h;
+}
+function panelBas(){
+  const all=roster(), names=all.filter(n=>Object.keys(R(n).bas).length);
+  let h=`<div class="tool"><span class="muted">학생이 "도저히 못 풀겠다" 싶을 때 스스로 들어오는 기초 연습이에요. 문제는 매번 새로 만들어지고, 연속 3개를 맞히면 ⭐.</span></div>`;
+  h+=`<div class="help">${BT.map(b=>{ let n=0,ok=0,stars=0,people=0; const ws={};
+      for(const x of all){ const y=R(x).bas[b.k]; if(!y) continue; people++; n+=y.n; ok+=y.ok; if(y.star) stars++; for(const w in (y.ws||{})) ws[w]=(ws[w]||0)+y.ws[w]; }
+      const wl=Object.entries(ws).filter(([w])=>+w>0).sort((a,c)=>c[1]-a[1]).map(([w,c])=>`${w}단계(${b.steps[w-1]||''}) ${c}`).join(' · ');
+      return `<div class="hc"><div class="nm" style="font-size:16px">${b.name}</div><div class="loc">${b.desc}</div>
+        <div class="stat">연습한 학생 <b>${people}</b> · 푼 문제 <b>${n}</b> · 정답률 <b>${n?Math.round(ok/n*100):0}%</b> · ⭐ <b>${stars}</b>명</div>
+        ${wl?`<div class="stat m">자주 틀린 단계: ${wl}</div>`:''}</div>`; }).join('')}</div>`;
+  if(names.length) h+=`<div class="grp" style="margin-top:18px"><b>학생별</b> · 맞힌 문제/푼 문제, 최근 5개(○×)</div><table class="mx"><tr><th>학생</th>${BT.map(b=>`<th>${b.name}</th>`).join('')}</tr>`+
+    names.map(n=>`<tr><td class="nm">${esc(n)}</td>${BT.map(b=>{ const y=R(n).bas[b.k]; if(!y) return '<td>·</td>'; const bad=y.recent&&y.recent.length>=3&&y.recent.slice(-3).every(v=>!v);
+      return `<td class="${y.star?'ok':bad?'bad':''}">${y.ok}/${y.n} ${y.star?'⭐':''}<div class="lv">${(y.recent||[]).map(v=>v?'○':'×').join('')}</div></td>`; }).join('')}</tr>`).join('')+`</table>`;
   return h;
 }
 function panelPreview(){
-  let h=`<div class="tool"><span class="muted">학생에게 보이는 힌트와 풀이예요. 문구는 <b>unit.js</b> 파일에서 고칠 수 있어요.</span></div>`;
-  for(const p of P){
-    h+=`<div class="pv"><div class="q"><div><b style="font-size:20px">${p.no}</b> <span class="muted">${G[p.group].name}</span><div class="ptext" style="margin-top:4px">${p.text}</div>
-      <div style="margin-top:6px;color:var(--acc);font-weight:700">정답: ${p.ans}</div>
-      <ol>${p.hints.map(x=>`<li>${x}</li>`).join('')}</ol>
-      <div class="hcard" style="margin-top:8px;background:var(--o-soft);border-radius:10px;padding:10px"><b>풀이</b><br>${p.sol}<div style="margin-top:6px;font-weight:900">💡 ${p.rule}</div></div></div>
-      <div>${p.fig?p.fig():''}</div></div></div>`;
-  }
+  let h=`<div class="tool"><span class="muted">학생에게 보이는 힌트·풀이·확인 문제예요. 문구는 <b>unit.js</b>에서 고칠 수 있어요.</span><button class="ghost sm" onclick="$('panel').dataset.pv='';render()">기초 연습 예시 새로 만들기</button></div>`;
+  for(const p of P) h+=`<div class="pv"><div class="q"><div><b style="font-size:20px">${p.no}</b> <span class="muted">${G[p.group].name} · 막히면 권할 기초: ${((U.basicFor||{})[p.id]||[]).map(k=>BBY[k].name).join(', ')}</span><div class="ptext" style="margin-top:4px">${p.text}</div>
+      <div style="margin-top:6px;color:var(--acc);font-weight:700">정답: ${p.ans}</div><ol>${p.hints.map(x=>`<li>${x}</li>`).join('')}</ol>
+      <div style="margin-top:8px;background:var(--o-soft);border-radius:10px;padding:10px"><b>풀이</b><br>${p.sol}<div style="margin-top:6px;font-weight:900">💡 ${p.rule}</div></div></div><div>${p.fig?p.fig():''}</div></div></div>`;
   h+=`<div class="grp"><b>확인 문제</b></div>`;
-  for(const t of TW) h+=`<div class="pv"><div class="q"><div><b>확인 ${PBY[t.of].no}</b><div class="ptext">${t.text}</div><div style="margin-top:6px">${t.ch.map((c,i)=>`${'①②③④'[i]} ${c}${i===t.ok?' ✔':''}`).join(' &nbsp; ')}</div><div class="muted" style="margin-top:4px">${t.exp}</div></div><div>${t.fig?t.fig():''}</div></div></div>`;
+  for(const t of TW) h+=`<div class="pv"><div class="q"><div><b>확인 ${PBY[t.of].no}</b><div class="ptext">${t.text}</div><div style="margin-top:6px">${t.ch.map((c,i)=>`${NUM[i]} ${c}${i===t.ok?' ✔':''}`).join(' &nbsp; ')}</div><div class="muted" style="margin-top:4px">${t.exp}</div></div><div>${t.fig?t.fig():''}</div></div></div>`;
+  h+=`<div class="grp"><b>기초 연습 예시</b> (매번 새로 만들어져요)</div>`;
+  for(const b of BT){ const q=U.basicGen[b.k](); h+=`<div class="pv"><div class="q"><div><b>${b.name}</b><div class="ptext">${q.text}</div><div style="margin-top:6px">${q.kind==='mc'?q.choices.map((c,i)=>i===q.ok?`<b>✔ ${c}</b>`:c).join(' · '):`정답: ${q.ans} ${q.suffix}`}</div>
+      ${q.steps.length?`<ol>${q.steps.map(s=>`<li>${s.q}</li>`).join('')}</ol>`:''}</div><div>${q.fig||''}</div></div></div>`; }
   return h;
 }
-/* 📺 크게 보기: 이름 없이 결과만 */
 function openBig(){ $('big').classList.add('on'); renderBig(); }
 function closeBig(){ $('big').classList.remove('on'); }
 function renderBig(){
-  const names=roster(), N=names.length, v=S.view;
-  let h='';
-  if(v==='diag'||v==='preview'){
-    h=`<h2>스스로 채점 결과 <span class="muted" style="font-size:20px">○ 맞음 △ 막힘 × 틀림</span></h2>`+P.map(p=>`<div class="brow"><span class="no">${p.no}</span>${barHTML(diagCounts(p,names),N)}</div>`).join('');
-  } else if(v==='hint'){
-    h=`<h2>해결한 친구들 ✔</h2>`+P.map(p=>{ const s=names.filter(x=>(S.recs[x]||{solved:{}}).solved[p.id]).length; return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?s/N*100:0}%">${s||''}</div></div><span style="width:110px">${s} / ${N}</span></div>`; }).join('');
-  } else {
-    const open=TW.filter(t=>S.twinOpen[t.id]);
-    h=`<h2>확인 문제</h2>`+(open.length?open.map(t=>{ const st=twinStats(t,names), rev=!!S.twinReveal[t.id];
-      return `<div style="margin-bottom:24px"><div style="font-size:24px;font-weight:900;margin-bottom:6px">확인 ${PBY[t.of].no} <span class="muted" style="font-size:18px">제출 ${st.sub}명</span></div>`+
-        t.ch.map((c,i)=>`<div class="brow" style="font-size:22px"><span style="width:240px">${'①②③④'[i]} ${c} ${rev&&i===t.ok?'✔':''}</span><div class="bar"><div class="${rev&&i===t.ok?'seg-o':'seg-n'}" style="width:${st.sub?st.by[i].length/st.sub*100:0}%;color:#222">${st.by[i].length||''}</div></div></div>`).join('')+`</div>`; }).join('') : '<p class="muted">열린 확인 문제가 없어요</p>');
-  }
+  const names=roster(), N=names.length;
+  let h=`<h2>문제별 진행 <span class="muted" style="font-size:18px">초록 = 해결(처음부터 ○ 포함) · 오른쪽 = 확인 문제 정답</span></h2>`;
+  h+=P.map(p=>{ const done=names.filter(n=>R(n).diag[p.id]==='o'||R(n).solved[p.id]).length, t=TOF[p.id], st=twinStats(t,names);
+    return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?done/N*100:0}%">${done||''}</div></div><span style="width:190px">확인 ⭕ ${st.by[t.ok].length} / ${st.sub}</span></div>`; }).join('');
   $('bigBody').innerHTML=h;
 }
 
-/* ---------- 기록: CSV · 백업 · 초기화 ---------- */
+/* ---------- 기록 ---------- */
 function download(name,text,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
 function stamp(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
 function exportCSV(){
-  const q=s=>`"${String(s??'').replace(/"/g,'""')}"`;
-  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`]),...TW.flatMap(t=>[`확인${PBY[t.of].no}답`,`확인${PBY[t.of].no}정오`,`확인${PBY[t.of].no}이유`])];
-  const W={o:'맞음',t:'막힘',x:'틀림'};
-  const rows=roster().map(n=>{ const r=S.recs[n]||{diag:{},hint:{},solved:{},twin:{}};
-    return [n,...P.flatMap(p=>{ const hh=r.hint[p.id]||{}, sv=r.solved[p.id]; return [W[r.diag[p.id]]||'',hh.lv||0,hh.sol?'O':'',sv?'O':'',sv&&sv.cause?CN[sv.cause]:'']; }),
-      ...TW.flatMap(t=>{ const x=r.twin[t.id]||{}; return [x.a!=null?x.a+1:'', x.a!=null?(x.a===t.ok?'O':'X'):'', x.cause?CN[x.cause]:'']; })]; });
+  const q=s=>`"${String(s??'').replace(/"/g,'""')}"`, W={o:'맞음',t:'막힘',x:'틀림'};
+  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`,`${p.no}확인답`,`${p.no}확인정오`,`${p.no}확인이유`]),...BT.flatMap(b=>[`기초${b.k}푼수`,`기초${b.k}정답`,`기초${b.k}별`])];
+  const rows=roster().map(n=>{ const r=R(n);
+    return [n,...P.flatMap(p=>{ const hh=r.hint[p.id]||{}, sv=r.solved[p.id], t=TOF[p.id], x=r.twin[t.id]||{};
+      return [W[r.diag[p.id]]||'',hh.lv||0,hh.sol?'O':'',sv?'O':'',sv&&sv.cause?CN[sv.cause]:'', x.a!=null?x.a+1:'', x.a!=null?(x.a===t.ok?'O':'X'):'', x.cause?CN[x.cause]:'']; }),
+      ...BT.flatMap(b=>{ const y=r.bas[b.k]; return y?[y.n,y.ok,y.star?'O':'']:['','','']; })]; });
   download(`단원마무리-${stamp()}.csv`,'\ufeff'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n'),'text/csv;charset=utf-8');
 }
 function backup(){ download(`단원마무리-백업-${stamp()}.json`,JSON.stringify({app:'unit-review',unit:U.id,ver:APP_VER,state:S},null,1),'application/json'); }
@@ -417,9 +407,9 @@ function restore(inp){
   rd.readAsText(f);
 }
 function resetAll(){
-  if(!confirm('학생 기록과 설정(단계·정답 공개·풀이 허용·확인 문제)을 모두 지울까요?\n먼저 [💾 백업]이나 [⬇ CSV]로 저장해 두는 것을 권해요.')) return;
-  const code=S.code; S=Object.assign({},DEF,{code,recs:{},mode:{},twinOpen:{},twinReveal:{}}); save();
-  pushCfg(); for(const s of students.values()) if(s.online&&s.dev){ rec(s.name); sendTo(s,{t:'mine',rec:S.recs[s.name]}); } save(); render(); toast('초기화했어요');
+  if(!confirm('학생 기록과 설정(기다리는 시간·문제별 잠금)을 모두 지울까요?\n먼저 [💾 백업]이나 [⬇ CSV]로 저장해 두는 것을 권해요.')) return;
+  const code=S.code; S=Object.assign({},DEF,{code,recs:{},mode:{}}); save(); pushCfg();
+  for(const s of students.values()) if(s.online&&s.dev){ rec(s.name); sendMine(s.name); } save(); render(); toast('초기화했어요');
 }
 function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 지금 연결된 학생은 새 코드로 다시 들어와야 해요.')) return; S.code=newCode(); save(); students.clear(); showCode(); render(); openPeer(); }
 window.addEventListener('beforeunload',e=>{ if(onlineNames().size){ e.preventDefault(); e.returnValue=''; } });

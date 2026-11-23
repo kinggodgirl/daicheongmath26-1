@@ -36,7 +36,7 @@ function arcTo(c,P,Q){
 /* 선분 길이: 둥근 점선 호 + 가운데 글자 */
 function dimLine(P,Q,label,d=26){
   const dx=Q[0]-P[0], dy=Q[1]-P[1], L=Math.hypot(dx,dy), n=[-dy/L,dx/L], M=mid(P,Q);
-  const C=[M[0]+n[0]*2*d, M[1]+n[1]*2*d], Lp=[M[0]+n[0]*d, M[1]+n[1]*d];
+  const w=label.length*14.4, e=d+Math.sign(d)*Math.abs(n[0])*w*0.42, C=[M[0]+n[0]*2*d, M[1]+n[1]*2*d], Lp=[M[0]+n[0]*e, M[1]+n[1]*e];
   return `<path d="M ${pt(P)} Q ${pt(C)} ${pt(Q)}" fill="none" stroke="#111" stroke-width="1.8" stroke-dasharray="0.1 5" stroke-linecap="round"/>`
        + `<rect x="${fx(Lp[0]-label.length*7.2)}" y="${fx(Lp[1]-14)}" width="${fx(label.length*14.4)}" height="28" fill="#fff"/>`
        + T(Lp[0],Lp[1],label);
@@ -47,19 +47,19 @@ function arrowHead(P,dir){
   return `<path d="M ${pt(P)} L ${pt([b[0]+n[0]*4,b[1]+n[1]*4])} L ${pt([b[0]-n[0]*4,b[1]-n[1]*4])} Z" fill="#111"/>`;
 }
 function arcDim(c,R,a0,a1,gap,label,lr){
-  const r=R+gap, P0=pol(c,r,a0), P1=pol(c,r,a1);
+  const r=R+gap, P0=pol(c,r,a0), P1=pol(c,r,a1), big=(a1-a0)>180?1:0;
   const rad=a=>a*Math.PI/180;
-  let s=`<path d="M ${pt(P0)} A ${r} ${r} 0 0 0 ${pt(P1)}" fill="none" stroke="#111" stroke-width="1.6"/>`;
+  let s=`<path d="M ${pt(P0)} A ${r} ${r} 0 ${big} 0 ${pt(P1)}" fill="none" stroke="#111" stroke-width="1.6"/>`;
   s+=ln(pol(c,R+4,a0),pol(c,r+8,a0),1.6)+ln(pol(c,R+4,a1),pol(c,r+8,a1),1.6);
   s+=arrowHead(P1,[-Math.sin(rad(a1)),-Math.cos(rad(a1))]);   // 반시계 끝
   s+=arrowHead(P0,[Math.sin(rad(a0)),Math.cos(rad(a0))]);     // 시계 끝
-  const Lp=pol(c,lr,(a0+a1)/2);
-  return s+T(Lp[0],Lp[1],label,{anchor:'start'});
+  const m=(a0+a1)/2, Lp=pol(c,lr,m), cs=Math.cos(rad(m));
+  return s+T(Lp[0],Lp[1],label,{anchor: cs>0.3?'start': cs<-0.3?'end':'middle'});
 }
 /* 각 표시 */
 function angMark(V,a0,a1,r,label,lr,size=21){
-  const P0=pol(V,r,a0), P1=pol(V,r,a1), Lp=pol(V,lr,(a0+a1)/2);
-  return `<path d="M ${pt(P0)} A ${r} ${r} 0 0 0 ${pt(P1)}" fill="none" stroke="#111" stroke-width="1.6"/>`+T(Lp[0],Lp[1],label,{size});
+  const P0=pol(V,r,a0), P1=pol(V,r,a1), Lp=pol(V,lr,(a0+a1)/2), big=(a1-a0)>180?1:0;
+  return `<path d="M ${pt(P0)} A ${r} ${r} 0 ${big} 0 ${pt(P1)}" fill="none" stroke="#111" stroke-width="1.6"/>`+T(Lp[0],Lp[1],label,{size});
 }
 
 const FIG = {
@@ -274,6 +274,179 @@ const TWINS = [
    exp:`한 조각을 옮기면 반지름 3 cm, 중심각 60°인 부채꼴 → 9${PI} × ${FR(1,6)} × 3 = ${FR('9'+PI,2)} cm²` }
 ];
 
+/* =========================================================
+   기초 연습 (1쪽 왼쪽 기초 유형) — 문제는 매번 무작위로 만들어져요
+   각 문제: {text, fig, kind:'mc'|'num', choices, ok, ans, suffix, steps:[{q,kind,choices,ok,ans,suffix}], exp}
+   - 'num' 답은 숫자만 입력 (π는 칸 옆에 미리 적혀 있음)
+   - 처음에 틀리면 steps(학습지의 풀이 순서)대로 한 칸씩 다시 풀어요
+========================================================= */
+const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a);
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const ri=(lo,hi)=>lo+Math.floor(Math.random()*(hi-lo+1));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fracH=(n,d)=>{const g=gcd(n,d);n/=g;d/=g;return d===1?String(n):FR(n,d);};
+function mc(correct,wrongs){ const w=[...new Set(wrongs)].filter(x=>x!==correct).slice(0,3); const all=shuffle([correct,...w]); return {choices:all, ok:all.indexOf(correct)}; }
+const BOX='<span class="blank">　　</span>';
+const XI=`<tspan font-style="italic">x</tspan>`;
+
+/* 부채꼴 그림: 반지름 표시, 중심각, 호 길이(선택), 색칠(선택) */
+function sectorFig(o){
+  const C=[180,155], R=100, th=o.theta, mid=o.mid!=null?o.mid:90, a0=mid-th/2, a1=mid+th/2, big=th>180?1:0;
+  const P0=pol(C,R,a0), P1=pol(C,R,a1);
+  const path=`M ${pt(C)} L ${pt(P0)} A ${R} ${R} 0 ${big} 0 ${pt(P1)} Z`;
+  let s=`<path d="${path}" fill="${o.shade?GRAY:'none'}" stroke="#111" stroke-width="2.6" stroke-linejoin="round"/>`+dot(C);
+  if(o.rLabel) s+=dimLine(C,P0,o.rLabel,30);
+  if(o.angLabel) s+=angMark(C,a0,a1,24,o.angLabel,th<60?52:44,20);
+  if(o.arcLabel) s+=arcDim(C,R,a0,a1,14,o.arcLabel,R+34);
+  if(o.inLabel){ const q=pol(C,R*0.62,mid); s+=T(q[0],q[1],o.inLabel,{halo:true}); }
+  // 부채꼴이 차지하는 영역에 맞춰 잘라서 크게 보이게
+  const pts=[C,P0,P1]; for(const ang of [0,90,180,270,360,450]){ const a=ang; if((a>=a0&&a<=a1)||(a-360>=a0&&a-360<=a1)) pts.push(pol(C,R,a)); }
+  const mx=48, xs=pts.map(q=>q[0]), ys=pts.map(q=>q[1]);
+  const x0=Math.min(...xs)-mx-(o.rLabel?30:0), y0=Math.min(...ys)-mx, x1=Math.max(...xs)+mx+(o.rLabel?30:0), y1=Math.max(...ys)+mx;
+  return `<svg class="fig" viewBox="${fx(x0)} ${fx(y0)} ${fx(x1-x0)} ${fx(y1-y0)}" xmlns="http://www.w3.org/2000/svg" style="max-height:300px">${s}</svg>`;
+}
+/* 원 안의 두 부채꼴 (비례 문제) */
+function twoSectorFig(a,b,l1,l2,area){
+  const C=[210,160], R=95, gap=30, tot=a+gap+b, s0=90-tot/2+ (Math.random()<.5?0:180);
+  const A0=s0, A1=s0+a, B0=A1+gap, B1=B0+b;
+  let s=`<circle cx="${C[0]}" cy="${C[1]}" r="${R}" fill="none" stroke="#111" stroke-width="2.6"/>`;
+  const sec=(x0,x1)=>`<path d="M ${pt(C)} L ${pt(pol(C,R,x0))} A ${R} ${R} 0 ${x1-x0>180?1:0} 0 ${pt(pol(C,R,x1))} Z" fill="${area?GRAY:'none'}" stroke="#111" stroke-width="2.6" stroke-linejoin="round"/>`;
+  s+=sec(A0,A1)+sec(B0,B1)+dot(C);
+  s+=angMark(C,A0,A1,22,`${a}°`,a<30?60:a<45?52:42,18)+angMark(C,B0,B1,22,`${b}°`,b<30?60:b<45?52:42,18);
+  if(!area){ s+=arcDim(C,R,A0,A1,12,l1,R+30)+arcDim(C,R,B0,B1,12,l2,R+30); }
+  else { for(const [x0,x1,l] of [[A0,A1,l1],[B0,B1,l2]]){ const m=(x0+x1)/2, q=pol(C,R+26,m), cs=Math.cos(m*Math.PI/180); s+=T(q[0],q[1],l,{anchor:cs>0.3?'start':cs<-0.3?'end':'middle'}); } }
+  return svg(420,330,s);
+}
+
+/* 그림 보고 이름 고르기 (예시·비예시) */
+const ID_NAMES=['반지름','지름','현','호','부채꼴','활꼴','중심각','어느 것도 아니에요'];
+const ID_EXP={
+  '반지름':'원의 중심과 원 위의 한 점을 이은 선분 → <b>반지름</b>',
+  '지름':'원의 중심을 지나는 현 → <b>지름</b> (반지름의 2배)',
+  '현':'원 위의 두 점을 이은 선분 → <b>현</b> (중심을 지나지 않아도 돼요)',
+  '호':'원 위의 두 점 사이의 원의 일부(곡선) → <b>호</b>',
+  '부채꼴':'두 반지름과 호로 둘러싸인 도형 → <b>부채꼴</b>',
+  '활꼴':'현과 호로 둘러싸인 도형 → <b>활꼴</b>',
+  '중심각':'부채꼴에서 두 반지름이 이루는 각 → <b>중심각</b>',
+  'none-sector':'부채꼴 모양 같지만 꼭짓점이 원의 <b>중심이 아니에요</b>. 부채꼴은 두 <b>반지름</b>과 호로 둘러싸여야 해요 → <b>어느 것도 아니에요</b>',
+  'none-chord':'한 끝이 원 위에 있지 않아요. 현은 <b>양 끝이 모두 원 위</b>에 있어야 해요 → <b>어느 것도 아니에요</b>',
+  'none-arc':'곡선이지만 <b>원의 일부가 아니에요</b>(원을 벗어나 있어요) → <b>어느 것도 아니에요</b>'
+};
+function idFig(kind){
+  const C=[150,140], R=100, f=ri(0,359), al=ri(75,130), P=a=>pol(C,R,a);
+  const TH='stroke="#111" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"';
+  let hi='', away=f+al/2+180;
+  const A=P(f), B=P(f+al);
+  switch(kind){
+    case '반지름': hi=`<line x1="${fx(C[0])}" y1="${fx(C[1])}" x2="${fx(A[0])}" y2="${fx(A[1])}" ${TH}/>`+dot(A,5); away=f+180; break;
+    case '지름': { const D=P(f+180); hi=`<line x1="${fx(A[0])}" y1="${fx(A[1])}" x2="${fx(D[0])}" y2="${fx(D[1])}" ${TH}/>`+dot(A,5)+dot(D,5); away=f+90; break; }
+    case '현': hi=`<line x1="${fx(A[0])}" y1="${fx(A[1])}" x2="${fx(B[0])}" y2="${fx(B[1])}" ${TH}/>`+dot(A,5)+dot(B,5); break;
+    case '호': hi=`<path d="M ${pt(A)} A ${R} ${R} 0 0 0 ${pt(B)}" fill="none" ${TH}/>`+dot(A,5)+dot(B,5); break;
+    case '부채꼴': hi=`<path d="M ${pt(C)} L ${pt(A)} A ${R} ${R} 0 0 0 ${pt(B)} Z" fill="${GRAY}" ${TH}/>`; break;
+    case '활꼴': hi=`<path d="M ${pt(A)} A ${R} ${R} 0 0 0 ${pt(B)} Z" fill="${GRAY}" ${TH}/>`; break;
+    case '중심각': hi=ln(C,A)+ln(C,B)+`<path d="M ${pt(C)} L ${pt(pol(C,30,f))} A 30 30 0 0 0 ${pt(pol(C,30,f+al))} Z" fill="${GRAY}" stroke="none"/><path d="M ${pt(pol(C,30,f))} A 30 30 0 0 0 ${pt(pol(C,30,f+al))}" fill="none" ${TH}/>`; break;
+    case 'none-sector': { const Q=pol(C,R*0.45,f+al/2+180); hi=`<path d="M ${pt(Q)} L ${pt(A)} A ${R} ${R} 0 0 0 ${pt(B)} Z" fill="${GRAY}" ${TH}/>`+dot(Q,4); away=f+al/2; break; }
+    case 'none-chord': { const Q=pol(C,R*0.5,f+al); hi=`<line x1="${fx(A[0])}" y1="${fx(A[1])}" x2="${fx(Q[0])}" y2="${fx(Q[1])}" ${TH}/>`+dot(A,5)+dot(Q,5); break; }
+    case 'none-arc': { const M=pol(C,R*1.28,f+al/2); hi=`<path d="M ${pt(A)} Q ${pt(M)} ${pt(B)}" fill="none" ${TH}/>`+dot(A,5)+dot(B,5); break; }
+  }
+  const lo=pol(C,20,away);
+  return svg(300,280,`<circle cx="${C[0]}" cy="${C[1]}" r="${R}" fill="none" stroke="#111" stroke-width="2.2"/>`+hi+dot(C)+T(lo[0],lo[1],'O',{halo:true}));
+}
+
+const A1_ITEMS=[
+  ['<b>원</b>: 평면 위의 한 점 O에서 □에 있는 모든 점으로 이루어진 도형','일정한 거리',['가장 가까운 거리','같은 방향','한 직선 위']],
+  ['<b>반지름</b>: 원의 중심과 □을 이은 선분','원 위의 한 점',['원 안의 한 점','원 밖의 한 점','현의 중점']],
+  ['<b>지름</b>: 원 위의 두 점을 이은 선분 중 □을 지나는 것','원의 중심',['원 밖의 한 점','반지름의 중점','호의 중점']],
+  ['<b>호</b>: 원 위의 두 점을 □을 따라 이은 곡선','원',['직선','지름','반지름']],
+  ['<b>현</b>: 원 위의 두 점을 이은 □','선분',['곡선','호','반직선']],
+  ['<b>부채꼴</b>: 원의 두 □과 호로 둘러싸인 도형','반지름',['현','지름','중심각']],
+  ['<b>활꼴</b>: 원의 호와 □으로 둘러싸인 도형','현',['반지름 두 개','중심각','원의 중심']],
+  ['<b>중심각</b>: 부채꼴에서 두 □이 이루는 각','반지름',['현','호','지름']],
+  ['반지름의 길이가 <i class="mv">r</i>인 원의 <b>넓이</b>는 □',`${PI}<i class="mv">r</i>²`,[`2${PI}<i class="mv">r</i>`,`${PI}<i class="mv">r</i>`,`2${PI}<i class="mv">r</i>²`]],
+  ['반지름의 길이가 <i class="mv">r</i>인 원의 <b>둘레의 길이</b>는 □',`2${PI}<i class="mv">r</i>`,[`${PI}<i class="mv">r</i>²`,`${PI}<i class="mv">r</i>`,`4${PI}<i class="mv">r</i>`]],
+  ['한 원에서 부채꼴의 <b>호의 길이</b>는 중심각의 크기에 □','정비례한다',['반비례한다','관계없이 같다']],
+  ['한 원에서 <b>현의 길이</b>는 중심각의 크기에 □','정비례하지 않는다',['정비례한다','반비례한다']]
+];
+let A1_LAST=-1, A2_LAST='';
+const BASIC_GEN={
+  A1(){
+    let i; do{ i=ri(0,A1_ITEMS.length-1); }while(i===A1_LAST && A1_ITEMS.length>1); A1_LAST=i;
+    const [s,ok,w]=A1_ITEMS[i], m=mc(ok,w);
+    return {text:`□에 알맞은 것을 고르시오.<div class="sent">${s.replace('□',BOX)}</div>`, fig:null, kind:'mc', choices:m.choices, ok:m.ok, steps:[],
+      exp:s.replace('□',`<u><b>${ok}</b></u>`)};
+  },
+  A2(){
+    const pool=['반지름','지름','현','호','부채꼴','활꼴','중심각','반지름','현','호','부채꼴','활꼴','none-sector','none-chord','none-arc'];
+    let k; do{ k=rnd(pool); }while(k===A2_LAST); A2_LAST=k;
+    const ans=k.startsWith('none')?'어느 것도 아니에요':k;
+    return {text:`원 O에서 <b>굵게 표시한 것</b>의 이름을 고르시오.`, fig:idFig(k), kind:'mc', choices:ID_NAMES.slice(), ok:ID_NAMES.indexOf(ans), steps:[], wide:true, exp:ID_EXP[k]};
+  },
+  B(){
+    const area=Math.random()<0.35;
+    let a,b,k,L,x,up;
+    for(;;){
+      a=rnd([20,24,30,36,40,45,60,72,90]); k=rnd([2,3,4]); up=Math.random()<0.6;
+      if(up){ b=a*k; if(a+b>300) continue; L=ri(2,9); x=L*k; }
+      else { if(a%k) continue; b=a/k; if(b<20||a+b>300) continue; const m=ri(2,7); L=m*k; x=m; }
+      break;
+    }
+    const u=area?'cm²':'cm', what=area?'넓이':'호의 길이';
+    const ratioCh=['2배','3배','4배',`${FR(1,2)}배`,`${FR(1,3)}배`,`${FR(1,4)}배`];
+    const okR= up? `${k}배` : `${FR(1,k)}배`;
+    const r=mc(okR, shuffle(ratioCh.filter(c=>c!==okR)).slice(0,3));
+    return {text:`한 원에서 중심각의 크기가 ${a}°인 부채꼴의 ${what}가 ${L} ${u}일 때, 중심각의 크기가 ${b}°인 부채꼴의 ${what}를 구하시오.`,
+      fig:twoSectorFig(a,b,`${L} ${u}`,`${XI} ${u}`,area), kind:'num', ans:x, suffix:u,
+      steps:[
+        {q:`중심각이 ${a}° → ${b}°로 바뀌었어요. 몇 배가 되었나요?`, kind:'mc', choices:r.choices, ok:r.ok},
+        {q:`${what}도 중심각과 <b>같은 배</b>가 돼요. ${L} ${u}의 ${okR}는?`, kind:'num', ans:x, suffix:u}
+      ],
+      exp:`중심각이 ${okR}가 되면 ${what}도 ${okR} → ${L} × ${up?k:FR(1,k)} = <b>${x} ${u}</b><br>(비례식: ${a} : ${b} = ${L} : <i class="mv">x</i>)`};
+  },
+  C(){
+    const area=Math.random()<0.5;
+    let r,th,coef;
+    for(;;){ r=ri(2,12); th=rnd([30,40,45,60,72,80,90,100,120,135,144,150,160,180,200,210,225,240,270]);
+      coef= area? r*r*th/360 : r*th/180; if(Number.isInteger(coef) && coef>0) break; }
+    const full= area? r*r : 2*r, u= area?'cm²':'cm', what= area?'넓이':'호의 길이', circ= area?'넓이':'둘레의 길이';
+    const fOk=fracH(th,360);
+    const cand=[]; if(th<180) cand.push(fracH(th,180)); cand.push(fracH(360-th,360)); if(th<=100) cand.push(fracH(th,100));
+    for(const [n,d] of shuffle([[1,2],[1,3],[1,4],[2,3],[3,4],[1,6],[5,6],[3,8],[5,8],[5,12],[1,5],[2,5]])) cand.push(fracH(n,d));
+    const fr=mc(fOk,[...new Set(cand)].filter(c=>c!==fOk).slice(0,3));
+    return {text:`반지름의 길이가 ${r} cm이고 중심각의 크기가 ${th}°인 부채꼴의 <b>${what}</b>를 구하시오.`,
+      fig:sectorFig({theta:th, mid:th>180?270:rnd([90,90,60,120]), rLabel:`${r} cm`, angLabel:`${th}°`, shade:area, arcLabel:area?null:'? cm', inLabel:null}),
+      kind:'num', ans:coef, suffix:`${PI} ${u}`,
+      steps:[
+        {q:`반지름이 ${r} cm인 <b>원</b>의 ${circ}는?`, kind:'num', ans:full, suffix:`${PI} ${u}`},
+        {q:`중심각 ${th}°인 부채꼴은 원의 몇 분의 몇 조각인가요? (${th}/360을 약분)`, kind:'mc', choices:fr.choices, ok:fr.ok},
+        {q:`${full}${PI} × ${fOk} = ?`, kind:'num', ans:coef, suffix:`${PI} ${u}`}
+      ],
+      exp:`원의 ${circ} = ${area?`${PI} × ${r}²`:`2${PI} × ${r}`} = ${full}${PI}, 부채꼴은 원의 ${FR(th,360)} = ${fOk}<br>→ ${full}${PI} × ${fOk} = <b>${coef}${PI} ${u}</b>`};
+  },
+  D(){
+    let r,k,th;
+    for(;;){ r=ri(3,12); k=ri(2,12); th=180*k/r; if((k*r)%2===0 && th>=30 && th<=300) break; }
+    const S=k*r/2;
+    const f=mc('½ × (호의 길이) × (반지름)',['(호의 길이) × (반지름)','½ × (반지름) × (반지름)','2 × (호의 길이) × (반지름)']);
+    return {text:`반지름의 길이가 ${r} cm이고 호의 길이가 ${k}${PI} cm인 부채꼴의 <b>넓이</b>를 구하시오.`,
+      fig:sectorFig({theta:th, mid:th>180?270:90, rLabel:`${r} cm`, shade:true, arcLabel:`${k}${PI} cm`}),
+      kind:'num', ans:S, suffix:`${PI} cm²`,
+      steps:[
+        {q:'중심각을 모를 때 부채꼴의 넓이를 구하는 공식은? (삼각형 넓이 공식과 닮았어요)', kind:'mc', choices:f.choices.map(c=>c.replace('½',FR(1,2))), ok:f.ok},
+        {q:`${FR(1,2)} × ${k}${PI} × ${r} = ?`, kind:'num', ans:S, suffix:`${PI} cm²`}
+      ],
+      exp:`(넓이) = ${FR(1,2)} × (호의 길이) × (반지름) = ${FR(1,2)} × ${k}${PI} × ${r} = <b>${S}${PI} cm²</b>`};
+  }
+};
+const BASIC_TYPES=[
+  {k:'A1', name:'개념 빈칸', desc:'원·호·현·부채꼴·활꼴의 뜻', steps:[]},
+  {k:'A2', name:'그림 보고 이름 고르기', desc:'이건 호일까 현일까? 부채꼴일까 아닐까?', steps:[]},
+  {k:'B',  name:'중심각과 호의 길이', desc:'중심각이 2배면 호의 길이도 2배', steps:['몇 배인지','답']},
+  {k:'C',  name:'[반지름, 중심각] → 호의 길이·넓이', desc:'원의 몇 분의 몇 조각인지 구하기', steps:['원의 둘레·넓이','몇 분의 몇','답']},
+  {k:'D',  name:'[반지름, 호의 길이] → 넓이', desc:'½ × 호의 길이 × 반지름', steps:['공식','답']}
+];
+/* 각 문제에서 막혔을 때 권할 기초 유형 */
+const BASIC_FOR={p1:['B','C'], p2:['C','A1'], p3:['A2','B'], p4:['C','D'], p5:['A2','B'], p6:['C','A2'], p7:['C','D']};
+
 const CAUSES = [
   {k:'concept', label:'개념을 몰랐어요', short:'개념'},
   {k:'idea',    label:'아이디어가 안 떠올랐어요', short:'아이디어'},
@@ -285,6 +458,7 @@ window.UNIT = {
   id:'circle-sector-review',                 // 저장 이름 (단원이 바뀌면 바꾸세요)
   title:'원과 부채꼴 단원 마무리',
   sub:'Ⅵ. 대단원 마무리',
-  groups:GROUPS, problems:PROBLEMS, twins:TWINS, causes:CAUSES
+  groups:GROUPS, problems:PROBLEMS, twins:TWINS, causes:CAUSES,
+  basicTypes:BASIC_TYPES, basicGen:BASIC_GEN, basicFor:BASIC_FOR
 };
 })();
