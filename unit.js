@@ -1,0 +1,290 @@
+/* =========================================================
+   단원 마무리 내용 파일 — 원과 부채꼴 (Ⅵ 대단원 마무리)
+   ▶ 힌트·풀이 문구를 고치려면 이 파일만 고치면 됩니다.
+     (index.html, teacher.html 은 이 파일을 함께 읽어 씁니다)
+   ▶ 글자 꾸미기
+       A('AB')   → 호 AB  (위에 ⌒)
+       OV('AC')  → 선분 AC (위에 줄)
+       FR(4,9)   → 9분의 4 (분수)
+       I('x')    → 기울임 문자
+========================================================= */
+(function(){
+const A  = s => `<span class="arc">${s}</span>`;
+const OV = s => `<span class="ov">${s}</span>`;
+const FR = (a,b) => `<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+const I  = s => `<i class="mv">${s}</i>`;
+const PI = 'π';
+
+/* ---------------- 교과서 형식 그림 (흑백 SVG) ---------------- */
+const FONT = `font-family="'Times New Roman',Times,'Noto Serif KR',serif"`;
+const GRAY = '#d4d4d4';
+const svg = (w,h,body) => `<svg class="fig" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+const ln  = (P,Q,w=2.6) => `<line x1="${P[0]}" y1="${P[1]}" x2="${Q[0]}" y2="${Q[1]}" stroke="#111" stroke-width="${w}" stroke-linecap="round"/>`;
+const dot = (P,r=4) => `<circle cx="${P[0]}" cy="${P[1]}" r="${r}" fill="#111"/>`;
+const T = (x,y,s,o={}) => `<text x="${x}" y="${y}" ${FONT} font-size="${o.size||25}" text-anchor="${o.anchor||'middle'}" dominant-baseline="central"${o.it?' font-style="italic"':''}${o.halo?' stroke="#fff" stroke-width="7" paint-order="stroke" stroke-linejoin="round"':''} fill="#111">${s}</text>`;
+const pol = (c,r,deg) => [c[0]+r*Math.cos(deg*Math.PI/180), c[1]-r*Math.sin(deg*Math.PI/180)];   // 수학 각도(반시계)
+const mid = (P,Q) => [(P[0]+Q[0])/2,(P[1]+Q[1])/2];
+const fx = v => Math.round(v*100)/100;
+const pt = P => `${fx(P[0])} ${fx(P[1])}`;
+/* 중심 c, P → Q 작은 호 */
+function arcTo(c,P,Q){
+  const r=Math.hypot(P[0]-c[0],P[1]-c[1]);
+  const a=Math.atan2(P[1]-c[1],P[0]-c[0]), b=Math.atan2(Q[1]-c[1],Q[0]-c[0]);
+  let d=b-a; while(d<=-Math.PI) d+=2*Math.PI; while(d>Math.PI) d-=2*Math.PI;
+  return `A ${fx(r)} ${fx(r)} 0 0 ${d>0?1:0} ${pt(Q)}`;
+}
+/* 선분 길이: 둥근 점선 호 + 가운데 글자 */
+function dimLine(P,Q,label,d=26){
+  const dx=Q[0]-P[0], dy=Q[1]-P[1], L=Math.hypot(dx,dy), n=[-dy/L,dx/L], M=mid(P,Q);
+  const C=[M[0]+n[0]*2*d, M[1]+n[1]*2*d], Lp=[M[0]+n[0]*d, M[1]+n[1]*d];
+  return `<path d="M ${pt(P)} Q ${pt(C)} ${pt(Q)}" fill="none" stroke="#111" stroke-width="1.8" stroke-dasharray="0.1 5" stroke-linecap="round"/>`
+       + `<rect x="${fx(Lp[0]-label.length*7.2)}" y="${fx(Lp[1]-14)}" width="${fx(label.length*14.4)}" height="28" fill="#fff"/>`
+       + T(Lp[0],Lp[1],label);
+}
+/* 원의 호 길이: 바깥 실선 동심원 호 + 양 끝 눈금 + 양 끝 화살표 */
+function arrowHead(P,dir){
+  const n=[-dir[1],dir[0]], b=[P[0]-dir[0]*10,P[1]-dir[1]*10];
+  return `<path d="M ${pt(P)} L ${pt([b[0]+n[0]*4,b[1]+n[1]*4])} L ${pt([b[0]-n[0]*4,b[1]-n[1]*4])} Z" fill="#111"/>`;
+}
+function arcDim(c,R,a0,a1,gap,label,lr){
+  const r=R+gap, P0=pol(c,r,a0), P1=pol(c,r,a1);
+  const rad=a=>a*Math.PI/180;
+  let s=`<path d="M ${pt(P0)} A ${r} ${r} 0 0 0 ${pt(P1)}" fill="none" stroke="#111" stroke-width="1.6"/>`;
+  s+=ln(pol(c,R+4,a0),pol(c,r+8,a0),1.6)+ln(pol(c,R+4,a1),pol(c,r+8,a1),1.6);
+  s+=arrowHead(P1,[-Math.sin(rad(a1)),-Math.cos(rad(a1))]);   // 반시계 끝
+  s+=arrowHead(P0,[Math.sin(rad(a0)),Math.cos(rad(a0))]);     // 시계 끝
+  const Lp=pol(c,lr,(a0+a1)/2);
+  return s+T(Lp[0],Lp[1],label,{anchor:'start'});
+}
+/* 각 표시 */
+function angMark(V,a0,a1,r,label,lr,size=21){
+  const P0=pol(V,r,a0), P1=pol(V,r,a1), Lp=pol(V,lr,(a0+a1)/2);
+  return `<path d="M ${pt(P0)} A ${r} ${r} 0 0 0 ${pt(P1)}" fill="none" stroke="#111" stroke-width="1.6"/>`+T(Lp[0],Lp[1],label,{size});
+}
+
+const FIG = {
+  /* ① 원 위의 세 점 (호의 비 a:b:c) */
+  circle3(a,b,c){
+    const C=[140,125], R=88, tot=a+b+c;
+    const aA=125, aB=aA+360*a/tot, aC=aB+360*b/tot;
+    const P={A:pol(C,R,aA),B:pol(C,R,aB),Cc:pol(C,R,aC)};
+    const L=(ang,s)=>{const q=pol(C,R+20,ang); return T(q[0],q[1],s);};
+    return svg(280,250,`<circle cx="${C[0]}" cy="${C[1]}" r="${R}" fill="none" stroke="#111" stroke-width="2.6"/>`
+      +dot(P.A)+dot(P.B)+dot(P.Cc)+dot(C)+L(aA,'A')+L(aB,'B')+L(aC,'C')+T(C[0]+16,C[1]+14,'O'));
+  },
+  /* ③ 지름 AB, ∠CAB = d° */
+  diam(d){
+    const C=[150,128], R=95, A_=[C[0]-R,C[1]], B_=[C[0]+R,C[1]], Cc=pol(C,R,2*d);
+    const lc=pol(C,R+20,2*d);
+    return svg(300,240,`<circle cx="${C[0]}" cy="${C[1]}" r="${R}" fill="none" stroke="#111" stroke-width="2.6"/>`
+      +ln(A_,B_)+ln(A_,Cc)+dot(C)+dot(Cc)+T(A_[0]-18,A_[1],'A')+T(B_[0]+18,B_[1],'B')+T(lc[0],lc[1],'C')+T(C[0],C[1]+22,'O')
+      +angMark(A_,0,d,34,`${d}°`,58,20));
+  },
+  /* ④ 정사각형 안 두 사분원 (lens=true면 가운데를 색칠) */
+  lens(s,lens){
+    const x0=40,y0=22,k=190, TL=[x0,y0], TR=[x0+k,y0], BL=[x0,y0+k], BR=[x0+k,y0+k];
+    const lensPath=`M ${pt(BL)} ${arcTo(BR,BL,TR)} ${arcTo(TL,TR,BL)} Z`;
+    const sq=`M ${pt(TL)} L ${pt(TR)} L ${pt(BR)} L ${pt(BL)} Z`;
+    const m=13, rt=(P,sx,sy)=>`<path d="M ${P[0]+sx*m} ${P[1]} L ${P[0]+sx*m} ${P[1]+sy*m} L ${P[0]} ${P[1]+sy*m}" fill="none" stroke="#111" stroke-width="1.4"/>`;
+    return svg(270,285,
+      (lens? `<path d="${lensPath}" fill="${GRAY}"/>` : `<path d="${sq}" fill="${GRAY}"/><path d="${lensPath}" fill="#fff"/>`)
+      +`<path d="${sq}" fill="none" stroke="#111" stroke-width="2.6"/><path d="${lensPath}" fill="none" stroke="#111" stroke-width="2.6"/>`
+      +rt(TL,1,1)+rt(BR,-1,-1)+dimLine(BL,BR,`${s} cm`,28));
+  },
+  /* ⑤ 반원 O, AC∥OD, ∠BOD = d°, 호 BD = L cm */
+  semi(d,L){
+    const C=[150,172], R=120, A_=[C[0]-R,C[1]], B_=[C[0]+R,C[1]], D=pol(C,R,d), Cc=pol(C,R,2*d);
+    const lD=pol(C,R+20,d+5), lC=pol(C,R+20,2*d);
+    return svg(355,215,`<path d="M ${pt(B_)} A ${R} ${R} 0 0 0 ${pt(A_)}" fill="none" stroke="#111" stroke-width="2.6"/>`
+      +ln(A_,B_)+ln(A_,Cc)+ln(C,D)+dot(C)
+      +T(A_[0]-6,A_[1]+22,'A')+T(C[0],C[1]+24,'O')+T(B_[0]+4,B_[1]+24,'B')+T(lC[0],lC[1],'C')+T(lD[0]-4,lD[1]-2,'D')
+      +angMark(C,0,d,30,`${d}°`,52,19)
+      +arcDim(C,R,0,d,14,`${L} cm`,R+30));
+  },
+  /* ⑥ 정삼각형 ABC 바깥으로 이어지는 부채꼴 세 개 */
+  spiral(s){
+    const k=50, ox=110, oy=78, S=(x,y)=>[ox+x,oy-y], h=k*Math.sqrt(3)/2;
+    const A_=S(0,0), C_=S(k,0), B_=S(k/2,-h);
+    const D=pol(A_,k,120), E=pol(B_,2*k,240), F=pol(C_,3*k,0);
+    const sec=(c,P,Q)=>`<path d="M ${pt(c)} L ${pt(P)} ${arcTo(c,P,Q)} Z" fill="${GRAY}"/>`;
+    const arc=(c,P,Q)=>`<path d="M ${pt(P)} ${arcTo(c,P,Q)}" fill="none" stroke="#111" stroke-width="2.6"/>`;
+    const lab=mid(A_,C_);
+    return svg(345,262, sec(A_,C_,D)+sec(B_,D,E)+sec(C_,E,F)
+      +arc(A_,C_,D)+arc(B_,D,E)+arc(C_,E,F)+ln(B_,D)+ln(C_,E)+ln(A_,F)
+      +`<path d="M ${pt([lab[0],lab[1]-3])} Q ${lab[0]+20} ${lab[1]-40} ${lab[0]+46} ${lab[1]-44}" fill="none" stroke="#111" stroke-width="1.2"/>`
+      +T(lab[0]+50,lab[1]-46,`${s} cm`,{anchor:'start',size:23})
+      +T(A_[0]-14,A_[1]+4,'A',{size:22,halo:true})+T(B_[0]+4,B_[1]+20,'B',{size:22,halo:true})+T(C_[0]+6,C_[1]-16,'C',{size:22})
+      +T(D[0]-10,D[1]-12,'D')+T(E[0]-12,E[1]+14,'E')+T(F[0]+14,F[1],'F'));
+  },
+  /* ⑦ 정삼각형의 각 변을 지름으로 하는 반원 */
+  tri3(s){
+    const k=240, h=k*Math.sqrt(3)/2, B_=[40,236], C_=[40+k,236], A_=[160,236-h];
+    const M={AB:mid(A_,B_),BC:mid(B_,C_),CA:mid(C_,A_)};
+    const piece=(V,Mvp,Mvq,Mpq)=>`<path d="M ${pt(V)} ${arcTo(Mvp,V,Mvq)} ${arcTo(Mpq,Mvq,Mvp)} ${arcTo(Mvq,Mvp,V)} Z" fill="${GRAY}"/>`;
+    // 반원(안쪽) = 60° 호 세 개
+    const semi=(P,Q,Mpq,Mp,Mq)=>`<path d="M ${pt(P)} ${arcTo(Mpq,P,Mp)} ${arcTo(Mpq,Mp,Mq)} ${arcTo(Mpq,Mq,Q)}" fill="none" stroke="#111" stroke-width="2.6"/>`;
+    return svg(320,312,
+      piece(B_,M.AB,M.BC,M.CA)+piece(C_,M.CA,M.BC,M.AB)+piece(A_,M.AB,M.CA,M.BC)
+      +semi(B_,C_,M.BC,M.AB,M.CA)+semi(C_,A_,M.CA,M.BC,M.AB)+semi(A_,B_,M.AB,M.CA,M.BC)
+      +`<path d="M ${pt(A_)} L ${pt(B_)} L ${pt(C_)} Z" fill="none" stroke="#111" stroke-width="2.6" stroke-linejoin="round"/>`
+      +dimLine(B_,C_,`${s} cm`,36));
+  }
+};
+
+/* ---------------- 문제 · 힌트 · 풀이 ----------------
+   hints: 학생이 차례로 여는 힌트 (앞의 것을 열고 기다려야 다음이 열림)
+   sol  : 마지막 단계 '풀이' (교사가 '풀이까지' 허용해야 열림)
+   rule : 풀이 아래에 굵게 보이는 한 줄 규칙 (다른 문제에도 쓰는 생각)
+   group: 교사 화면 묶음 (같은 아이디어끼리)
+------------------------------------------------------- */
+const GROUPS = {
+  ratio: {name:'비례', desc:'중심각 ∝ 호의 길이·넓이'},
+  aux:   {name:'보조선', desc:'반지름 긋기 → 이등변삼각형'},
+  area:  {name:'넓이 쪼개기', desc:'더하고 빼고 옮기기'}
+};
+
+const PROBLEMS = [
+ { id:'p1', no:'①', group:'ratio', title:'호의 비와 중심각',
+   text:`오른쪽 그림의 원 O에서 ${A('AB')} : ${A('BC')} : ${A('CA')} = 2 : 3 : 4일 때, ${A('CA')}에 대한 중심각의 크기를 구하시오.`,
+   fig:()=>FIG.circle3(2,3,4),
+   ans:`160°`,
+   hints:[
+     `${A('AB')}, ${A('BC')}, ${A('CA')}의 중심각을 모두 더하면 몇 도일까요? (원을 한 바퀴 돌아요!)`,
+     `사탕 18개를 2 : 3 : 4의 비율로 3명에게 나눠 주면 각각 몇 개씩 받을까요?`,
+     `이번에는 360°를 2 : 3 : 4로 나눠 봅시다. ${A('CA')}는 그중 몇 번째 몫일까요?`
+   ],
+   sol:`세 호의 중심각을 모두 더하면 360°예요. 호의 길이는 중심각의 크기에 정비례하므로 중심각의 비도 2 : 3 : 4입니다.<br>${A('CA')}의 중심각 = 360° × ${FR(4,9)} = <b>160°</b>`,
+   rule:`호의 길이의 비 = 중심각의 크기의 비`
+ },
+ { id:'p2', no:'②', group:'ratio', title:'부채꼴의 호의 길이와 넓이',
+   text:`반지름의 길이가 8 cm이고 중심각의 크기가 135°인 부채꼴의 호의 길이와 넓이를 각각 구하시오.`,
+   fig:null,
+   ans:`호의 길이 6${PI} cm, 넓이 24${PI} cm²`,
+   hints:[
+     `그림을 대충이라도 그려 봅시다. 반지름 8 cm, 중심각 135°인 부채꼴이에요.`,
+     `반지름이 8 cm인 원의 둘레와 넓이는 각각 얼마일까요?`,
+     `135°는 360°의 몇 분의 몇일까요? 약분까지 해 보세요.`
+   ],
+   sol:`원의 둘레 = 2${PI} × 8 = 16${PI} (cm), 원의 넓이 = ${PI} × 8² = 64${PI} (cm²)<br>${FR('135','360')} = ${FR(3,8)} 이므로 부채꼴은 원의 ${FR(3,8)} 조각이에요.<br>호의 길이 = 16${PI} × ${FR(3,8)} = <b>6${PI} cm</b>, 넓이 = 64${PI} × ${FR(3,8)} = <b>24${PI} cm²</b>`,
+   rule:`부채꼴 = 원의 ${FR('(중심각)','360')} 조각`
+ },
+ { id:'p3', no:'③', group:'aux', title:'지름과 현이 만드는 호의 비',
+   text:`원 O에서 현 AC와 지름 AB가 이루는 각의 크기가 40°일 때, ${A('AC')}와 ${A('CB')}의 길이의 비를 가장 간단한 자연수의 비로 나타내시오.`,
+   fig:()=>FIG.diam(40),
+   ans:`5 : 4`,
+   hints:[
+     `호의 길이는 중심각과 관계가 있어요! ${A('AC')}와 ${A('CB')}의 중심각을 그려 보세요. 어떤 선분을 그어야 할까요?`,
+     `${OV('OC')}를 그었나요? ${OV('OA')}와 ${OV('OC')}는 둘 다 원의 반지름이에요. 그럼 삼각형 OAC는 어떤 삼각형일까요? ∠OCA의 크기는?`,
+     `중심각 ∠AOC의 크기는? (삼각형의 세 각의 크기의 합은 180°)`,
+     `중심각 ∠BOC의 크기는? (${OV('AB')}는 한 직선이에요!) 이제 비를 쓸 때 순서에 조심하세요.`
+   ],
+   sol:`${OV('OC')}를 그으면 ${OV('OA')} = ${OV('OC')} (반지름)이므로 삼각형 OAC는 이등변삼각형 → ∠OCA = ∠OAC = 40°<br>∠AOC = 180° − 40° − 40° = 100°, ∠BOC = 180° − 100° = 80°<br>${A('AC')} : ${A('CB')} = 100 : 80 = <b>5 : 4</b>`,
+   rule:`중심 O와 원 위의 점이 보이면 반지름부터 긋는다 → 이등변삼각형`
+ },
+ { id:'p4', no:'④', group:'area', title:'정사각형 속 두 사분원',
+   text:`오른쪽 그림과 같은 정사각형에서 색칠한 부분의 둘레의 길이와 넓이를 각각 구하시오.`,
+   fig:()=>FIG.lens(6,false),
+   ans:`둘레 (24 + 6${PI}) cm, 넓이 (72 − 18${PI}) cm²`,
+   hints:[
+     `둘레부터 구해 봅시다. 선을 따라 색칠한 부분의 경계를 모두 돌려면 호는 몇 번, 선분은 몇 번 따라가야 할까요?`,
+     `문제에 있는 호 몇 개가 모이면 원이 될까요? 그 원의 반지름은 몇 cm일까요?`,
+     `이제 넓이! 색칠한 한 조각은 (정사각형) − (무엇)일까요? 정사각형에서 빼야 할 도형을 찾아보세요.`
+   ],
+   sol:`<b>둘레</b>: 선분 4개 → 6 × 4 = 24 (cm), 호 2개 → 각각 반지름 6 cm인 원의 ${FR(1,4)} → 2 × (12${PI} × ${FR(1,4)}) = 6${PI} (cm)<br>→ <b>(24 + 6${PI}) cm</b><br><b>넓이</b>: 한 조각 = (정사각형) − (사분원) = 36 − 9${PI}, 두 조각 → <b>(72 − 18${PI}) cm²</b>`,
+   rule:`색칠한 부분 = (큰 도형) − (색칠하지 않은 부분)`
+ },
+ { id:'p5', no:'⑤', group:'aux', title:'평행선과 반원',
+   text:`오른쪽 그림과 같은 반원 O에서 ${OV('AC')} ∥ ${OV('OD')}, ∠BOD = 30°, ${A('BD')} = 6 cm일 때, ${A('AC')}의 길이를 구하시오.`,
+   fig:()=>FIG.semi(30,6),
+   ans:`24 cm`,
+   hints:[
+     `호의 길이를 알려면 중심각을 알면 돼요. ${A('AC')}의 중심각을 그리고 크기를 구하려고 노력해 봅시다.`,
+     `평행선을 이용하여 알 수 있는 각을 모두 표시해 보세요. (동위각, 엇각) ∠OAC의 크기는?`,
+     `이등변삼각형이 보이나요? ${OV('OA')}와 ${OV('OC')}는 둘 다 반지름! ∠OCA와 ∠AOC의 크기는?`,
+     `중심각이 30°일 때 호의 길이가 6 cm예요. 중심각이 ∠AOC일 때 호의 길이는? 비례식을 세워 보세요.`
+   ],
+   sol:`${OV('OC')}를 긋습니다. ${OV('AC')} ∥ ${OV('OD')}이므로 ∠OAC = ∠BOD = 30° (동위각)<br>${OV('OA')} = ${OV('OC')}이므로 ∠OCA = 30° → ∠AOC = 180° − 60° = 120°<br>30 : 120 = 6 : ${A('AC')} → ${A('AC')} = <b>24 cm</b>`,
+   rule:`③과 같은 생각: 반지름 긋기(이등변삼각형) + 평행선의 동위각`
+ },
+ { id:'p6', no:'⑥', group:'area', title:'이어지는 부채꼴 세 개',
+   text:`오른쪽 그림과 같이 한 변의 길이가 3 cm인 정삼각형 ABC의 세 꼭짓점을 중심으로 부채꼴을 그렸을 때, 색칠한 부분의 넓이를 구하려고 한다. 풀이 과정과 답을 쓰시오. (단, ${OV('AC')} = ${OV('AD')}, ${OV('BD')} = ${OV('BE')}, ${OV('CE')} = ${OV('CF')})`,
+   fig:()=>FIG.spiral(3),
+   ans:`42${PI} cm²`,
+   hints:[
+     `부채꼴 DAC부터 봅시다. 반지름은 ${OV('AC')} = 3 cm예요. 중심각 ∠DAC의 크기는? (∠BAC = 60°이고, D는 ${OV('BA')}의 연장선 위에 있어요)`,
+     `부채꼴 DAC가 몇 개 모이면 원이 될까요? 그럼 넓이는?`,
+     `부채꼴 BDE의 반지름은? (${OV('BD')} = ${OV('BA')} + ${OV('AD')}) 중심각 ∠DBE의 크기는?`,
+     `마지막 부채꼴 CEF의 반지름과 중심각은? 세 부채꼴의 넓이를 더하세요. 풀이 과정을 쓰는 것도 잊지 마세요!`
+   ],
+   sol:`세 부채꼴의 중심각은 모두 180° − 60° = 120° → 원의 ${FR(1,3)}<br>반지름: ${OV('AC')} = 3, ${OV('BD')} = 3 + 3 = 6, ${OV('CE')} = 3 + 6 = 9 (cm)<br>넓이 = ${FR(1,3)}(9${PI} + 36${PI} + 81${PI}) = 3${PI} + 12${PI} + 27${PI} = <b>42${PI} cm²</b>`,
+   rule:`부채꼴마다 [반지름, 중심각]을 표로 정리하고 더한다`
+ },
+ { id:'p7', no:'⑦', group:'area', title:'정삼각형과 세 반원',
+   text:`오른쪽 그림은 한 변의 길이가 8 cm인 정삼각형의 각 변을 지름으로 하는 반원을 그린 것이다. 색칠한 부분의 넓이를 구하시오.`,
+   fig:()=>FIG.tri3(8),
+   ans:`8${PI} cm²`,
+   hints:[
+     `반원의 반지름은 몇 cm일까요? 색칠한 조각은 3개이고 모양이 모두 같아요. 한 조각만 구해서 3배 하면 돼요.`,
+     `지금 모양으로는 넓이를 구하기가 쉽지 않아요. 한 조각에서 삼각형 밖으로 튀어나온 부분을 잘라서, 안쪽으로 파인 자리에 옮겨 붙여 보세요.`,
+     `옮기고 나니 부채꼴이 되었나요? 그 부채꼴의 반지름과 중심각의 크기는? (정삼각형의 한 각을 떠올려 보세요)`
+   ],
+   sol:`반원의 반지름은 4 cm. 한 조각에서 튀어나온 활꼴 하나를 파인 자리로 옮기면, 반지름 4 cm, 중심각 60°인 부채꼴이 돼요.<br>한 조각 = 16${PI} × ${FR(1,6)} = ${FR('8'+PI,3)} (cm²), 세 조각 → <b>8${PI} cm²</b>`,
+   rule:`모양이 복잡하면 잘라서 옮겨 구하기 쉬운 모양(부채꼴)으로 만든다`
+ }
+];
+
+/* ---------------- 확인 문제 (쌍둥이 문제, 책 덮고) ----------------
+   ok: 정답 번호(0부터), why: 오답을 고른 학생이 무엇을 놓쳤는지 교사 참고용
+------------------------------------------------------- */
+const TWINS = [
+ { id:'t1', of:'p1', text:`원 O에서 ${A('AB')} : ${A('BC')} : ${A('CA')} = 3 : 4 : 5일 때, ${A('CA')}에 대한 중심각의 크기는?`,
+   fig:()=>FIG.circle3(3,4,5),
+   ch:['150°','75°','120°','100°'], ok:0,
+   why:['', '360° 대신 180°를 나눔', '다른 호(BC)의 중심각', '비를 잘못 계산'],
+   exp:`세 중심각의 합 360°를 3 : 4 : 5로 나누면 ${A('CA')}의 중심각 = 360° × ${FR(5,12)} = 150°` },
+ { id:'t2', of:'p2', text:`반지름의 길이가 6 cm이고 중심각의 크기가 120°인 부채꼴의 호의 길이와 넓이는?`,
+   fig:null,
+   ch:[`호 4${PI} cm, 넓이 12${PI} cm²`,`호 12${PI} cm, 넓이 4${PI} cm²`,`호 2${PI} cm, 넓이 6${PI} cm²`,`호 4${PI} cm, 넓이 36${PI} cm²`], ok:0,
+   why:['', '원의 둘레와 넓이를 바꿔 씀', '둘레를 πr로 착각', '넓이에 1/3을 곱하지 않음'],
+   exp:`120°는 360°의 ${FR(1,3)} → 호 = 12${PI} × ${FR(1,3)} = 4${PI} cm, 넓이 = 36${PI} × ${FR(1,3)} = 12${PI} cm²` },
+ { id:'t3', of:'p3', text:`원 O에서 현 AC와 지름 AB가 이루는 각의 크기가 20°일 때, ${A('AC')} : ${A('CB')}는?`,
+   fig:()=>FIG.diam(20),
+   ch:['7 : 2','2 : 7','8 : 1','5 : 4'], ok:0,
+   why:['', '비의 순서를 바꿈', '∠BOC를 20°로 착각 (보조선 없이)', '앞 문제의 답을 그대로 씀'],
+   exp:`${OV('OC')}를 그으면 ∠OCA = 20° → ∠AOC = 140°, ∠BOC = 40° → 140 : 40 = 7 : 2` },
+ { id:'t4', of:'p4', text:`한 변의 길이가 4 cm인 정사각형에 그림과 같이 두 사분원을 그렸다. 색칠한 부분의 넓이는? (이번엔 가운데가 색칠되어 있어요!)`,
+   fig:()=>FIG.lens(4,true),
+   ch:[`(8${PI} − 16) cm²`,`(32 − 8${PI}) cm²`,`(16 − 4${PI}) cm²`,`4${PI} cm²`], ok:0,
+   why:['', '색칠하지 않은 바깥 부분을 구함', '바깥 한 조각만 구함', '사분원 하나의 넓이'],
+   exp:`(가운데) = (사분원 2개) − (정사각형) = 2 × 4${PI} − 16 = (8${PI} − 16) cm²` },
+ { id:'t5', of:'p5', text:`반원 O에서 ${OV('AC')} ∥ ${OV('OD')}, ∠BOD = 40°, ${A('BD')} = 4 cm일 때, ${A('AC')}의 길이는?`,
+   fig:()=>FIG.semi(40,4),
+   ch:['10 cm','14 cm','8 cm','16 cm'], ok:0,
+   why:['', '∠AOC를 180° − 40° = 140°로 착각', '∠AOC를 80°로 착각', '앞 문제처럼 4배라고 생각'],
+   exp:`∠OAC = 40° (동위각), ∠OCA = 40° (이등변삼각형) → ∠AOC = 100°. 40 : 100 = 4 : ${A('AC')} → 10 cm` },
+ { id:'t6', of:'p6', text:`한 변의 길이가 2 cm인 정삼각형 ABC로 ⑥과 같이 부채꼴 세 개를 그렸을 때, 색칠한 부분의 넓이는?`,
+   fig:()=>FIG.spiral(2),
+   ch:[`${FR('56'+PI,3)} cm²`,`${FR('28'+PI,3)} cm²`,`56${PI} cm²`,`4${PI} cm²`], ok:0,
+   why:['', '중심각을 60°로 착각', '원의 1/3을 곱하지 않음', '반지름을 모두 2 cm로 착각'],
+   exp:`중심각 120°(원의 ${FR(1,3)}), 반지름 2, 4, 6 → ${FR(1,3)}(4${PI} + 16${PI} + 36${PI}) = ${FR('56'+PI,3)} cm²` },
+ { id:'t7', of:'p7', text:`한 변의 길이가 6 cm인 정삼각형의 각 변을 지름으로 하는 반원을 ⑦과 같이 그렸을 때, 색칠한 부분의 넓이는?`,
+   fig:()=>FIG.tri3(6),
+   ch:[`${FR('9'+PI,2)} cm²`,`${FR('3'+PI,2)} cm²`,`${FR('27'+PI,2)} cm²`,`9${PI} cm²`], ok:0,
+   why:['', '한 조각만 구함', '반원 3개의 넓이를 더함', '중심각을 120°로 착각'],
+   exp:`한 조각을 옮기면 반지름 3 cm, 중심각 60°인 부채꼴 → 9${PI} × ${FR(1,6)} × 3 = ${FR('9'+PI,2)} cm²` }
+];
+
+const CAUSES = [
+  {k:'concept', label:'개념을 몰랐어요', short:'개념'},
+  {k:'idea',    label:'아이디어가 안 떠올랐어요', short:'아이디어'},
+  {k:'calc',    label:'계산을 실수했어요', short:'계산'},
+  {k:'unsure',  label:'잘 모르겠어요', short:'모름'}
+];
+
+window.UNIT = {
+  id:'circle-sector-review',                 // 저장 이름 (단원이 바뀌면 바꾸세요)
+  title:'원과 부채꼴 단원 마무리',
+  sub:'Ⅵ. 대단원 마무리',
+  groups:GROUPS, problems:PROBLEMS, twins:TWINS, causes:CAUSES
+};
+})();

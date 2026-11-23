@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교사용 · 단원 마무리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="turn-config.js"></script>
+<script src="unit.js"></script>
+<style>
+body{font-size:16px}
+.wrap{max-width:1380px;margin:0 auto;padding:14px 18px 40px}
+.head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.head h1{font-size:22px;font-weight:900}
+.head .codebox{display:flex;align-items:baseline;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+.head .code{font-size:34px;font-weight:900;letter-spacing:6px;color:var(--acc)}
+.head .url{font-size:13px;color:var(--muted);max-width:330px;word-break:break-all}
+.head .sp{flex:1}
+#badge{font-size:14px;font-weight:700;color:var(--muted)}
+#badge.on{color:var(--o)}
+button.sm{padding:7px 12px;font-size:14px}
+.phasebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 12px;margin-bottom:12px}
+.phasebar .lbl{font-weight:900;margin-right:6px}
+.phasebar button{background:#f1efe9;color:var(--ink);font-size:16px}
+.phasebar button.sel{background:var(--acc);color:#fff}
+.cols{display:grid;grid-template-columns:270px 1fr;gap:14px;align-items:start}
+.side .card h3{font-size:15px;margin-bottom:8px}
+.stu{list-style:none;max-height:430px;overflow:auto}
+.stu li{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid #f0ece3;font-size:15px}
+.stu li .dot{width:9px;height:9px;border-radius:50%;background:#ccc;flex:none}
+.stu li .dot.on{background:var(--o)}
+.stu li .nm{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stu li .pr{font-size:12px;color:var(--muted)}
+.stu li .rm{background:none;color:#bbb;padding:0 4px;font-size:14px}
+.stu li.off .nm{color:#999}
+.side input,.side select{width:100%;font-size:14px;padding:7px 9px}
+.side .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{background:#fff;color:var(--ink);border:2px solid var(--line);font-size:15px;padding:8px 14px}
+.tabs button.sel{border-color:var(--ink);background:var(--ink);color:#fff}
+.tool{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.tool .info{color:var(--muted);font-weight:700}
+.grp{font-size:13px;font-weight:900;color:var(--muted);margin:14px 0 6px;letter-spacing:.5px}
+.grp b{color:var(--ink)}
+.prow{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:8px}
+.prow .l1{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.prow .no{font-size:22px;font-weight:900;width:30px}
+.prow .tt{font-weight:700;width:200px}
+.bar{flex:1;min-width:220px;height:26px;border-radius:8px;background:#efece5;display:flex;overflow:hidden}
+.bar>div{height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px}
+.seg-o{background:var(--o)}.seg-t{background:var(--t)}.seg-x{background:var(--x)}.seg-n{background:#cfcac0}
+.cnt{font-size:14px;color:var(--muted);white-space:nowrap}
+.names{margin-top:8px;font-size:14px;line-height:1.8}
+.names .tag{display:inline-block;background:#f4f1ea;border-radius:8px;padding:0 8px;margin:0 4px 4px 0}
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border-radius:0;background:#fff;color:var(--ink);padding:6px 12px;font-size:14px}
+.seg button.sel{background:var(--ink);color:#fff}
+.seg button.sel.lock{background:#777}.seg button.sel.all{background:var(--o)}
+.stat{font-size:14px;color:var(--ink);margin-top:6px;line-height:1.7}
+.stat b{font-weight:900}
+.stat .m{color:var(--muted)}
+table.mx{border-collapse:collapse;width:100%;background:#fff;border-radius:12px;overflow:hidden;font-size:14px}
+table.mx th,table.mx td{border:1px solid #eee7da;padding:5px 6px;text-align:center}
+table.mx th{background:#f7f4ee}
+table.mx td.nm{text-align:left;font-weight:700;white-space:nowrap}
+table.mx td .lv{font-size:12px;color:var(--muted)}
+table.mx td.ok{background:var(--o-soft)}
+.twc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.twc .l1{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.twc .q{display:grid;grid-template-columns:1fr 150px;gap:12px;margin-top:6px;font-size:15px}
+.twc.closed{opacity:.6}
+.chrow{display:grid;grid-template-columns:200px 1fr 54px;gap:8px;align-items:center;margin-top:5px;font-size:15px;cursor:pointer}
+.chrow .cb{height:22px;background:#efece5;border-radius:6px;overflow:hidden}
+.chrow .cb>div{height:100%;background:#9aa7bd}
+.chrow.ok .cb>div{background:var(--o)}
+.chrow .why{grid-column:2/4;font-size:12px;color:var(--muted);margin-top:-3px}
+.pv{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.pv .q{display:grid;grid-template-columns:1fr 260px;gap:14px}
+.pv ol{margin:8px 0 0 22px}
+.pv li{margin-bottom:4px}
+/* 크게 보기 */
+#big{position:fixed;inset:0;background:#fff;z-index:40;display:none;padding:26px 40px;overflow:auto}
+#big.on{display:block}
+#big h2{font-size:34px;font-weight:900;margin-bottom:16px}
+#big .brow{display:flex;align-items:center;gap:18px;margin-bottom:14px;font-size:24px}
+#big .brow .no{font-size:34px;font-weight:900;width:46px}
+#big .brow .bar{height:44px;font-size:20px}
+#big .brow .bar>div{font-size:20px}
+#big .close{position:fixed;right:20px;top:16px}
+@media (max-width:1000px){ .cols{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="ttl">교사용</h1>
+    <div class="codebox"><span class="muted">수업 코드</span><span class="code" id="code">----</span></div>
+    <div><div class="url" id="url"></div><button class="ghost sm" onclick="copyURL()" style="margin-top:4px">학생 주소 복사</button></div>
+    <span class="sp"></span>
+    <span id="badge">연결 준비 중…</span>
+    <a id="demoLink" target="_blank"><button class="ghost sm">🎬 학생 화면 미리보기</button></a>
+    <button class="sm acc" onclick="openBig()">📺 크게 보기</button>
+  </div>
+  <div class="err muted" id="peerErr" style="color:var(--x);margin-bottom:8px"></div>
+
+  <div class="phasebar">
+    <span class="lbl">학생 화면:</span>
+    <button data-ph="wait" onclick="setPhase('wait')">대기</button>
+    <button data-ph="diag" onclick="setPhase('diag')">1. 스스로 채점</button>
+    <button data-ph="hint" onclick="setPhase('hint')">2. 힌트 보며 다시 풀기</button>
+    <button data-ph="twin" onclick="setPhase('twin')">3. 확인 문제 (책 덮고)</button>
+  </div>
+
+  <div class="cols">
+    <div class="side">
+      <div class="card"><h3>학생 <span class="muted" id="stuCnt"></span></h3><ul class="stu" id="stuList"></ul></div>
+      <div class="card"><h3>✋ 전체 멈춤</h3>
+        <input id="pauseMsg" type="text" maxlength="40">
+        <button id="pauseBtn" style="width:100%;margin-top:6px" onclick="togglePause()">멈추기</button></div>
+      <div class="card"><h3>기록</h3>
+        <div class="btns"><button class="ghost sm" onclick="exportCSV()">⬇ CSV</button><button class="ghost sm" onclick="backup()">💾 백업</button>
+        <button class="ghost sm" onclick="$('restoreFile').click()">📂 불러오기</button><button class="ghost sm" onclick="resetAll()">🔄 초기화</button>
+        <button class="ghost sm" onclick="changeCode()" style="grid-column:1/3">새 수업 코드 만들기</button></div>
+        <input type="file" id="restoreFile" accept=".json" class="hide" onchange="restore(this)">
+        <div class="muted" style="margin-top:8px;font-size:13px">기록은 이 컴퓨터 브라우저에 자동 저장돼요. 다른 반 수업 전에 [초기화]하세요.</div></div>
+    </div>
+    <div class="main">
+      <div class="tabs" id="tabs">
+        <button data-v="diag" onclick="setView('diag')">채점 결과</button>
+        <button data-v="hint" onclick="setView('hint')">힌트 현황</button>
+        <button data-v="twin" onclick="setView('twin')">확인 문제</button>
+        <button data-v="preview" onclick="setView('preview')">힌트·풀이 미리보기</button>
+      </div>
+      <div id="panel"></div>
+    </div>
+  </div>
+</div>
+<div id="big"><button class="ghost close" onclick="closeBig()">닫기 ✕</button><div id="bigBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const APP_VER=20261123.1;            // index.html 과 같은 값이어야 함
+const ID_PREFIX='kgg-unitreview-v1-';
+const PEER_OPTS={debug:0, config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}]}};
+let TURN_ON=false;
+const ICE_READY=(async()=>{
+  const t=window.NB_TURN||{};
+  if(!t.appName||!t.apiKey||!/^[a-z0-9-]+$/i.test(t.appName)) return false;
+  try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),5000);
+    const r=await fetch(`https://${t.appName}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.apiKey)}`,{signal:ctl.signal}); clearTimeout(tm);
+    if(!r.ok) return false; const list=await r.json();
+    if(Array.isArray(list)&&list.length){ PEER_OPTS.config.iceServers=PEER_OPTS.config.iceServers.concat(list); TURN_ON=true; return true; } }catch(e){}
+  return false;
+})();
+
+const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups;
+const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t]));
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+function toast(m,ms=2400){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),ms);}
+const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.map(c=>[c.k,c.short]));
+const SKEY='ur-t-'+U.id;
+const DEF={code:null, phase:'wait', showAns:false, wait:60, mode:{}, twinOpen:{}, twinReveal:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'diag'};
+let S=Object.assign({},DEF,LS.get(SKEY,{}));
+function save(){ LS.set(SKEY,S); }
+function newCode(){ return String(Math.floor(1000+Math.random()*9000)); }
+if(!S.code){ S.code=newCode(); save(); }
+const students=new Map();   // key → {conn,name,dev,online,seen,ver}
+let peer=null, OPEN={};     // OPEN: 펼친 이름 목록
+$('ttl').textContent='교사용 · '+U.title; document.title='교사용 · '+U.title;
+$('pauseMsg').value=S.pauseMsg;
+
+/* ---------- 장부 ---------- */
+function rec(name){ return S.recs[name]||(S.recs[name]={diag:{},hint:{},solved:{},twin:{}}); }
+function roster(){ const set=new Set(Object.keys(S.recs)); for(const s of students.values()) if(s.online&&s.dev) set.add(s.name); return [...set].sort((a,b)=>a.localeCompare(b,'ko',{numeric:true})); }
+function onlineNames(){ const set=new Set(); for(const s of students.values()) if(s.online&&s.dev) set.add(s.name); return set; }
+function modeOf(pid){ return S.mode[pid]||'hint'; }
+function cfgMsg(){ return {t:'cfg',phase:S.phase,showAns:S.showAns,wait:S.wait,mode:S.mode,twinOpen:S.twinOpen,twinReveal:S.twinReveal}; }
+function sendTo(s,o){ try{ s.conn.send(o); }catch(e){} }
+function broadcast(o){ for(const s of students.values()) if(s.online) sendTo(s,o); }
+function pushCfg(){ save(); broadcast(cfgMsg()); render(); }
+function sendMine(name){ for(const s of students.values()) if(s.online&&s.name===name) sendTo(s,{t:'mine',rec:S.recs[name]}); }
+
+/* ---------- 연결 ---------- */
+function studentURL(){ return location.href.replace(/[?#].*$/,'').replace(/teacher\.html$/,'')+'?c='+S.code; }
+function showCode(){ $('code').textContent=S.code; $('url').textContent=studentURL(); $('demoLink').href=studentURL().replace(/\?c=\d+$/,'?demo=1'); }
+function copyURL(){ const u=studentURL(); (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('학생 주소를 복사했어요')).catch(()=>{ prompt('학생 주소',u); }); }
+function openPeer(attempt=0){
+  try{ peer&&peer.destroy(); }catch(e){}
+  if(typeof Peer==='undefined'){ $('badge').textContent='연결 프로그램을 불러오지 못함'; $('peerErr').textContent='인터넷 연결을 확인하고 새로고침해 주세요.'; return; }
+  $('peerErr').textContent=''; $('badge').textContent='연결 준비 중…'; $('badge').classList.remove('on');
+  peer=new Peer(ID_PREFIX+'class-'+S.code,PEER_OPTS);
+  peer.on('open',()=>{ $('badge').textContent='● 학생 연결 받는 중'+(TURN_ON?' · 중계 서버 ✔':''); $('badge').classList.add('on'); });
+  peer.on('connection',c=>{
+    c._key='tmp-'+c.peer;
+    c.on('open',()=>{
+      students.set(c._key,{conn:c,name:'(이름 없음)',dev:null,online:true,seen:Date.now()});
+      sendTo({conn:c},cfgMsg()); sendTo({conn:c},{t:'pause',on:S.paused,msg:S.pauseMsg});
+      render();
+    });
+    c.on('data',d=>onData(c,d));
+    c.on('close',()=>{ const s=students.get(c._key); if(s&&s.conn===c){ s.online=false; render(); } });
+  });
+  peer.on('error',err=>{
+    if(err.type==='unavailable-id'){ $('badge').textContent='코드 사용 중'; $('badge').classList.remove('on');
+      $('peerErr').innerHTML='이 수업 코드가 다른 창에서 이미 열려 있어요. 그 창을 닫거나 [새 수업 코드 만들기]를 누르세요.'; return; }
+    if(['network','server-error','socket-error','socket-closed'].includes(err.type)){
+      $('badge').textContent='연결 끊김 · 다시 시도 중'; $('badge').classList.remove('on');
+      setTimeout(()=>openPeer(attempt+1),Math.min(10000,2000*(attempt+1)));
+    }
+  });
+  peer.on('disconnected',()=>{ try{peer.reconnect();}catch(e){} });
+}
+// 12초 동안 소식이 없으면 끊긴 것으로 표시
+setInterval(()=>{ let ch=false; for(const s of students.values()){ if(s.online&&Date.now()-s.seen>12000){ s.online=false; ch=true; try{s.conn.close();}catch(e){} } } if(ch) render(); },3000);
+
+const okPid=pid=>!!PBY[pid], okTid=tid=>!!TBY[tid];
+function onData(c,d){
+  if(!d||typeof d!=='object') return;
+  const s=students.get(c._key); if(!s||s.conn!==c) return;
+  s.seen=Date.now(); if(!s.online){ s.online=true; render(); }
+  if(d.t==='ping'){ sendTo(s,{t:'pong'}); return; }
+  if(d.t==='hi'){
+    const dev=String(d.dev||'').slice(0,16);
+    if(dev && c._key!=='dev-'+dev){ const key='dev-'+dev, old=students.get(key); if(old&&old.conn!==c){ try{old.conn.close();}catch(e){} } students.delete(c._key); c._key=key; students.set(key,s); }
+    s.dev=dev; s.name=String(d.name||'(이름 없음)').trim().slice(0,10)||'(이름 없음)'; s.ver=+d.ver||0;
+    sendTo(s,{t:'ver',v:APP_VER}); rec(s.name); save(); render(); return;
+  }
+  if(!s.dev) return;
+  const r=rec(s.name);
+  if(d.t==='sync'){ mergeRec(r,d.rec||{}); save(); sendMine(s.name); }
+  else if(d.t==='diag' && okPid(d.pid)){ if(['o','t','x'].includes(d.v)) r.diag[d.pid]=d.v; else delete r.diag[d.pid]; save(); }
+  else if(d.t==='hint' && okPid(d.pid)){
+    const lv=Math.max(0,Math.min(PBY[d.pid].hints.length, +d.lv||0)), h=r.hint[d.pid]||{};
+    r.hint[d.pid]={lv:Math.max(h.lv||0,lv), sol:!!(h.sol || (d.sol && modeOf(d.pid)==='all'))}; save();
+  }
+  else if(d.t==='solved' && okPid(d.pid)){
+    if(d.on){ const cause=CN[d.cause]?d.cause:null; const h=r.hint[d.pid]||{}; r.solved[d.pid]={lv:h.lv||0,sol:!!h.sol,cause}; } else delete r.solved[d.pid]; save();
+  }
+  else if(d.t==='twinAns' && okTid(d.tid)){ const a=+d.a; if(S.twinOpen[d.tid] && !S.twinReveal[d.tid] && a>=0 && a<TBY[d.tid].ch.length){ r.twin[d.tid]=Object.assign({},r.twin[d.tid],{a}); save(); } }
+  else if(d.t==='twinCause' && okTid(d.tid)){ if(CN[d.cause] && r.twin[d.tid]){ r.twin[d.tid].cause=d.cause; save(); } }
+  render();
+}
+/* 학생 기기 기록과 장부 합치기 (새로고침·기기 바꿈 대비) */
+function mergeRec(r,x){
+  for(const pid in (x.diag||{})) if(okPid(pid)&&['o','t','x'].includes(x.diag[pid])) r.diag[pid]=x.diag[pid];
+  for(const pid in (x.hint||{})) if(okPid(pid)){ const h=r.hint[pid]||{}, y=x.hint[pid]||{}; r.hint[pid]={lv:Math.min(PBY[pid].hints.length,Math.max(h.lv||0,+y.lv||0)), sol:!!(h.sol||y.sol)}; }
+  for(const pid in (x.solved||{})) if(okPid(pid)&&!r.solved[pid]){ const y=x.solved[pid]||{}; r.solved[pid]={lv:+y.lv||0,sol:!!y.sol,cause:CN[y.cause]?y.cause:null}; }
+  for(const tid in (x.twin||{})) if(okTid(tid)){ const y=x.twin[tid]||{}, cur=r.twin[tid]||{}; const a=+y.a;
+    if(cur.a==null && y.a!=null && !S.twinReveal[tid] && a>=0 && a<TBY[tid].ch.length) cur.a=a;
+    if(!cur.cause && CN[y.cause]) cur.cause=y.cause; if(cur.a!=null) r.twin[tid]=cur; }
+}
+
+/* ---------- 조작 ---------- */
+function setPhase(ph){ S.phase=ph; if(ph!=='wait') S.view=ph; pushCfg(); }
+function setView(v){ S.view=v; save(); render(); }
+function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim()||'선생님을 봐 주세요'; save(); broadcast({t:'pause',on:S.paused,msg:S.pauseMsg}); render(); }
+function setMode(pid,m){ S.mode[pid]=m; pushCfg(); }
+function setAllMode(m){ for(const p of P) S.mode[p.id]=m; pushCfg(); }
+function toggleAns(){ S.showAns=!S.showAns; pushCfg(); }
+function setWait(v){ S.wait=+v; pushCfg(); }
+function twinOpen(tid,on){ S.twinOpen[tid]=on; pushCfg(); }
+function twinAll(on){ for(const t of TW) S.twinOpen[t.id]=on; pushCfg(); }
+function twinReveal(tid){ S.twinReveal[tid]=!S.twinReveal[tid]; pushCfg(); }
+function toggleNames(k){ OPEN[k]=!OPEN[k]; render(); }
+function removeName(n){ if(!confirm(`'${n}' 학생의 기록을 지울까요?`)) return; delete S.recs[n]; save(); render(); }
+
+/* ---------- 그리기 ---------- */
+let rT=null;
+function render(){ clearTimeout(rT); rT=setTimeout(renderNow,60); }
+function renderNow(){
+  showCode();
+  document.querySelectorAll('.phasebar button').forEach(b=>b.classList.toggle('sel',b.dataset.ph===S.phase));
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('sel',b.dataset.v===S.view));
+  $('pauseBtn').textContent=S.paused?'▶ 멈춤 풀기':'✋ 멈추기'; $('pauseBtn').style.background=S.paused?'var(--x)':'';
+  renderStudents();
+  const v=S.view;
+  $('panel').innerHTML= v==='diag'?panelDiag() : v==='hint'?panelHint() : v==='twin'?panelTwin() : panelPreview();
+  if($('big').classList.contains('on')) renderBig();
+}
+function progressOf(n){
+  const r=S.recs[n]; if(!r) return '';
+  if(S.phase==='diag') return `채점 ${Object.keys(r.diag).length}/${P.length}`;
+  if(S.phase==='hint') return `해결 ${Object.keys(r.solved).length} · 힌트 ${Object.values(r.hint).reduce((a,h)=>a+(h.lv||0),0)}개`;
+  if(S.phase==='twin'){ const open=TW.filter(t=>S.twinOpen[t.id]); return `제출 ${open.filter(t=>r.twin[t.id]&&r.twin[t.id].a!=null).length}/${open.length}`; }
+  return '';
+}
+function renderStudents(){
+  const on=onlineNames(), names=roster();
+  const vers=[...students.values()].filter(s=>s.online&&s.dev&&s.ver&&s.ver!==APP_VER).length;
+  $('stuCnt').textContent=`접속 ${on.size}명`+(vers?` · ⚠ 버전 다른 화면 ${vers}`:'');
+  $('stuList').innerHTML= names.length? names.map(n=>`<li class="${on.has(n)?'':'off'}"><span class="dot ${on.has(n)?'on':''}"></span><span class="nm">${esc(n)}</span><span class="pr">${on.has(n)?progressOf(n):'끊김'}</span>${on.has(n)?'':`<button class="rm" title="기록 지우기" onclick="removeName('${esc(n).replace(/'/g,"\\'")}')">✕</button>`}</li>`).join('')
+    : '<li class="muted">아직 들어온 학생이 없어요. 학생 주소나 수업 코드를 알려 주세요.</li>';
+}
+function tags(arr){ return arr.length? arr.map(n=>`<span class="tag">${esc(n)}</span>`).join('') : '<span class="muted">없음</span>'; }
+function grouped(fn){ let h=''; for(const gk in G){ const ps=P.filter(p=>p.group===gk); if(!ps.length) continue; h+=`<div class="grp"><b>${G[gk].name}</b> · ${G[gk].desc}</div>`+ps.map(fn).join(''); } return h; }
+function diagCounts(p,names){ const c={o:[],t:[],x:[],n:[]}; for(const n of names){ const m=(S.recs[n]||{diag:{}}).diag[p.id]; (c[m]||c.n).push(n); } return c; }
+function barHTML(c,total){ const w=k=>total?c[k].length/total*100:0; return `<div class="bar">${['o','t','x','n'].map(k=>c[k].length?`<div class="seg-${k}" style="width:${w(k)}%">${k==='n'?'':MK[k]+' '}${c[k].length}</div>`:'').join('')}</div>`; }
+
+function panelDiag(){
+  const names=roster(), N=names.length;
+  const done=names.filter(n=>Object.keys((S.recs[n]||{diag:{}}).diag).length===P.length).length;
+  let h=`<div class="tool"><button class="${S.showAns?'acc':'ghost'} sm" onclick="toggleAns()">${S.showAns?'✔ 학생 화면에 정답 보이는 중':'학생 화면에 정답 공개하기'}</button>
+    <span class="info">모두 고른 학생 ${done} / ${N}명</span><span class="muted">막대를 누르면 이름이 보여요 · ○맞음 △막힘 ×틀림 · 회색=아직</span></div>`;
+  h+=grouped(p=>{ const c=diagCounts(p,names), k='d'+p.id;
+    return `<div class="prow"><div class="l1" style="cursor:pointer" onclick="toggleNames('${k}')"><span class="no">${p.no}</span><span class="tt">${p.title}</span>${barHTML(c,N)}
+      <span class="cnt">△+× <b>${c.t.length+c.x.length}</b>명</span></div>
+      ${OPEN[k]?`<div class="names"><span class="mk t">△</span> ${tags(c.t)}<br><span class="mk x">×</span> ${tags(c.x)}<br><span class="mk o">○</span> ${tags(c.o)}<br><span class="muted">아직:</span> ${tags(c.n)}</div>`:''}</div>`; });
+  return h;
+}
+function panelHint(){
+  const names=roster();
+  let h=`<div class="tool"><span class="info">다음 힌트까지 기다리는 시간</span>
+    <select onchange="setWait(this.value)">${[0,30,60,90,120,180].map(v=>`<option value="${v}" ${S.wait==v?'selected':''}>${v?v+'초':'바로'}</option>`).join('')}</select>
+    <button class="ghost sm" onclick="setAllMode('hint')">모두 '힌트만'</button><button class="ghost sm" onclick="setAllMode('all')">모두 '풀이까지'</button>
+    <span class="muted">풀이는 '풀이까지'로 바꾼 문제만 학생이 열 수 있어요</span></div>`;
+  h+=grouped(p=>{
+    const md=modeOf(p.id), n=p.hints.length, c=diagCounts(p,names);
+    const stuck=[...c.t,...c.x], solved=names.filter(x=>(S.recs[x]||{solved:{}}).solved[p.id]);
+    const byLv=Array.from({length:n+1},()=>[]); let solSeen=[];
+    for(const x of names){ const hh=(S.recs[x]||{hint:{}}).hint[p.id]; byLv[hh?hh.lv:0].push(x); if(hh&&hh.sol) solSeen.push(x); }
+    const sByLv=Array.from({length:n+1},()=>0); const causes={};
+    for(const x of solved){ const sv=S.recs[x].solved[p.id]; if(sv.sol) continue; sByLv[Math.min(n,sv.lv||0)]++; if(sv.cause) causes[sv.cause]=(causes[sv.cause]||0)+1; }
+    const notSolvedStuck=stuck.filter(x=>!solved.includes(x)), k='h'+p.id;
+    return `<div class="prow"><div class="l1"><span class="no">${p.no}</span><span class="tt">${p.title}</span>
+      <span class="seg">${[['lock','잠금'],['hint','힌트만'],['all','풀이까지']].map(([m,l])=>`<button class="${md===m?'sel '+m:''}" onclick="setMode('${p.id}','${m}')">${l}</button>`).join('')}</span>
+      <span class="cnt" style="cursor:pointer" onclick="toggleNames('${k}')">처음에 막힌(△×) <b>${stuck.length}</b>명 중 아직 못 푼 <b style="color:var(--x)">${notSolvedStuck.length}</b>명 ▾</span></div>
+      <div class="stat">✔ 해결 <b>${solved.length}</b>명${(()=>{ const parts=[]; if(sByLv[0]) parts.push(`힌트 없이 ${sByLv[0]}`); sByLv.forEach((v,i)=>{ if(i&&v) parts.push(`힌트${i}까지 ${v}`); }); const ps=solved.length-sByLv.reduce((a,b)=>a+b,0); if(ps) parts.push(`풀이 보고 ${ps}`); return parts.length?` <span class="m">(${parts.join(' · ')})</span>`:''; })()}
+      ${(()=>{ const parts=byLv.map((a,i)=>i&&a.length?`H${i} <b>${a.length}</b>`:'').filter(Boolean); if(solSeen.length) parts.push(`풀이 <b>${solSeen.length}</b>`); return parts.length?` &nbsp;|&nbsp; 힌트 연 학생: ${parts.join(' · ')}`:''; })()}
+      ${Object.keys(causes).length?` &nbsp;|&nbsp; 막힌 이유: ${Object.entries(causes).map(([c,v])=>`${CN[c]} <b>${v}</b>`).join(' · ')}`:''}</div>
+      ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생(△×):</b> ${tags(notSolvedStuck.map(x=>{const hh=(S.recs[x].hint||{})[p.id]; return x+(hh&&hh.lv?` (H${hh.lv})`:'');}))}</div>`:''}</div>`; });
+  // 학생별 표
+  h+=`<div class="grp" style="margin-top:20px"><b>학생별 현황</b> · 기호=처음 채점, 숫자=연 힌트 수, ✔=해결</div>`;
+  h+=`<table class="mx"><tr><th>학생</th>${P.map(p=>`<th>${p.no}</th>`).join('')}</tr>`+
+    names.map(n=>{ const r=S.recs[n]||{diag:{},hint:{},solved:{}}; return `<tr><td class="nm">${esc(n)}</td>${P.map(p=>{ const d=r.diag[p.id], hh=r.hint[p.id], sv=r.solved[p.id];
+      return `<td class="${sv?'ok':''}">${d?`<span class="mk ${d}">${MK[d]}</span>`:'·'} <span class="lv">${hh&&hh.lv?'H'+hh.lv:''}${hh&&hh.sol?'풀':''}</span>${sv?' ✔':''}</td>`; }).join('')}</tr>`; }).join('')+`</table>`;
+  return h;
+}
+function twinStats(t,names){
+  const by=t.ch.map(()=>[]), causes={}; let sub=0;
+  for(const n of names){ const x=(S.recs[n]||{twin:{}}).twin[t.id]; if(x&&x.a!=null){ by[x.a].push(n); sub++; if(x.a!==t.ok&&x.cause) causes[x.cause]=(causes[x.cause]||0)+1; } }
+  return {by,causes,sub};
+}
+function panelTwin(){
+  const names=roster(), on=onlineNames();
+  let h=`<div class="tool"><button class="ghost sm" onclick="twinAll(true)">모두 열기</button><button class="ghost sm" onclick="twinAll(false)">모두 닫기</button>
+    <span class="muted">열린 문제만 학생 화면에 보여요. 정답을 공개하기 전까지 학생은 답을 바꿀 수 있어요.</span></div>`;
+  for(const t of TW){
+    const of=PBY[t.of], st=twinStats(t,names), open=!!S.twinOpen[t.id], rev=!!S.twinReveal[t.id], k='t'+t.id;
+    const right=st.by[t.ok].length;
+    h+=`<div class="twc ${open?'':'closed'}"><div class="l1"><b style="font-size:18px">확인 ${of?of.no:''}</b><span class="muted">(${of?of.no+' '+of.title:''}와 쌍둥이)</span>
+      <button class="sm ${open?'':'acc'}" onclick="twinOpen('${t.id}',${!open})">${open?'닫기':'열기'}</button>
+      ${open?`<button class="sm ${rev?'ghost':''}" style="${rev?'':'background:var(--o)'}" onclick="twinReveal('${t.id}')">${rev?'정답 공개 취소':'정답 공개'}</button>`:''}
+      <span class="cnt">제출 <b>${st.sub}</b> / 접속 ${on.size} · 정답률 <b>${st.sub?Math.round(right/st.sub*100):0}%</b></span></div>
+      <div class="q"><div class="ptext" style="font-weight:700">${t.text}</div><div>${t.fig?t.fig():''}</div></div>
+      ${t.ch.map((c,i)=>`<div class="chrow ${i===t.ok?'ok':''}" onclick="toggleNames('${k}')"><span>${'①②③④'[i]} ${c} ${i===t.ok?'✔':''}</span><div class="cb"><div style="width:${st.sub?st.by[i].length/st.sub*100:0}%"></div></div><b>${st.by[i].length}명</b>${t.why[i]?`<span class="why">→ ${t.why[i]}</span>`:''}</div>`).join('')}
+      ${Object.keys(st.causes).length?`<div class="stat">틀린 학생이 고른 이유: ${Object.entries(st.causes).map(([c,v])=>`${CN[c]} <b>${v}</b>`).join(' · ')}</div>`:''}
+      ${OPEN[k]?`<div class="names">${t.ch.map((c,i)=>`<b>${'①②③④'[i]}</b> ${tags(st.by[i])}`).join('<br>')}<br><b>미제출</b> ${tags(names.filter(n=>!st.by.some(a=>a.includes(n))))}</div>`:''}
+    </div>`;
+  }
+  return h;
+}
+function panelPreview(){
+  let h=`<div class="tool"><span class="muted">학생에게 보이는 힌트와 풀이예요. 문구는 <b>unit.js</b> 파일에서 고칠 수 있어요.</span></div>`;
+  for(const p of P){
+    h+=`<div class="pv"><div class="q"><div><b style="font-size:20px">${p.no}</b> <span class="muted">${G[p.group].name}</span><div class="ptext" style="margin-top:4px">${p.text}</div>
+      <div style="margin-top:6px;color:var(--acc);font-weight:700">정답: ${p.ans}</div>
+      <ol>${p.hints.map(x=>`<li>${x}</li>`).join('')}</ol>
+      <div class="hcard" style="margin-top:8px;background:var(--o-soft);border-radius:10px;padding:10px"><b>풀이</b><br>${p.sol}<div style="margin-top:6px;font-weight:900">💡 ${p.rule}</div></div></div>
+      <div>${p.fig?p.fig():''}</div></div></div>`;
+  }
+  h+=`<div class="grp"><b>확인 문제</b></div>`;
+  for(const t of TW) h+=`<div class="pv"><div class="q"><div><b>확인 ${PBY[t.of].no}</b><div class="ptext">${t.text}</div><div style="margin-top:6px">${t.ch.map((c,i)=>`${'①②③④'[i]} ${c}${i===t.ok?' ✔':''}`).join(' &nbsp; ')}</div><div class="muted" style="margin-top:4px">${t.exp}</div></div><div>${t.fig?t.fig():''}</div></div></div>`;
+  return h;
+}
+/* 📺 크게 보기: 이름 없이 결과만 */
+function openBig(){ $('big').classList.add('on'); renderBig(); }
+function closeBig(){ $('big').classList.remove('on'); }
+function renderBig(){
+  const names=roster(), N=names.length, v=S.view;
+  let h='';
+  if(v==='diag'||v==='preview'){
+    h=`<h2>스스로 채점 결과 <span class="muted" style="font-size:20px">○ 맞음 △ 막힘 × 틀림</span></h2>`+P.map(p=>`<div class="brow"><span class="no">${p.no}</span>${barHTML(diagCounts(p,names),N)}</div>`).join('');
+  } else if(v==='hint'){
+    h=`<h2>해결한 친구들 ✔</h2>`+P.map(p=>{ const s=names.filter(x=>(S.recs[x]||{solved:{}}).solved[p.id]).length; return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?s/N*100:0}%">${s||''}</div></div><span style="width:110px">${s} / ${N}</span></div>`; }).join('');
+  } else {
+    const open=TW.filter(t=>S.twinOpen[t.id]);
+    h=`<h2>확인 문제</h2>`+(open.length?open.map(t=>{ const st=twinStats(t,names), rev=!!S.twinReveal[t.id];
+      return `<div style="margin-bottom:24px"><div style="font-size:24px;font-weight:900;margin-bottom:6px">확인 ${PBY[t.of].no} <span class="muted" style="font-size:18px">제출 ${st.sub}명</span></div>`+
+        t.ch.map((c,i)=>`<div class="brow" style="font-size:22px"><span style="width:240px">${'①②③④'[i]} ${c} ${rev&&i===t.ok?'✔':''}</span><div class="bar"><div class="${rev&&i===t.ok?'seg-o':'seg-n'}" style="width:${st.sub?st.by[i].length/st.sub*100:0}%;color:#222">${st.by[i].length||''}</div></div></div>`).join('')+`</div>`; }).join('') : '<p class="muted">열린 확인 문제가 없어요</p>');
+  }
+  $('bigBody').innerHTML=h;
+}
+
+/* ---------- 기록: CSV · 백업 · 초기화 ---------- */
+function download(name,text,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+function stamp(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
+function exportCSV(){
+  const q=s=>`"${String(s??'').replace(/"/g,'""')}"`;
+  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`]),...TW.flatMap(t=>[`확인${PBY[t.of].no}답`,`확인${PBY[t.of].no}정오`,`확인${PBY[t.of].no}이유`])];
+  const W={o:'맞음',t:'막힘',x:'틀림'};
+  const rows=roster().map(n=>{ const r=S.recs[n]||{diag:{},hint:{},solved:{},twin:{}};
+    return [n,...P.flatMap(p=>{ const hh=r.hint[p.id]||{}, sv=r.solved[p.id]; return [W[r.diag[p.id]]||'',hh.lv||0,hh.sol?'O':'',sv?'O':'',sv&&sv.cause?CN[sv.cause]:'']; }),
+      ...TW.flatMap(t=>{ const x=r.twin[t.id]||{}; return [x.a!=null?x.a+1:'', x.a!=null?(x.a===t.ok?'O':'X'):'', x.cause?CN[x.cause]:'']; })]; });
+  download(`단원마무리-${stamp()}.csv`,'\ufeff'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n'),'text/csv;charset=utf-8');
+}
+function backup(){ download(`단원마무리-백업-${stamp()}.json`,JSON.stringify({app:'unit-review',unit:U.id,ver:APP_VER,state:S},null,1),'application/json'); }
+function restore(inp){
+  const f=inp.files[0]; if(!f) return; const rd=new FileReader();
+  rd.onload=()=>{ try{ const o=JSON.parse(rd.result); if(!o||!o.state||typeof o.state.recs!=='object') throw 0;
+    if(!confirm('백업 파일로 지금 기록을 바꿀까요? (수업 코드는 그대로)')) return;
+    const code=S.code; S=Object.assign({},DEF,o.state,{code}); save(); pushCfg(); for(const n in S.recs) sendMine(n); toast('불러왔어요'); }catch(e){ alert('백업 파일을 읽지 못했어요.'); } inp.value=''; };
+  rd.readAsText(f);
+}
+function resetAll(){
+  if(!confirm('학생 기록과 설정(단계·정답 공개·풀이 허용·확인 문제)을 모두 지울까요?\n먼저 [💾 백업]이나 [⬇ CSV]로 저장해 두는 것을 권해요.')) return;
+  const code=S.code; S=Object.assign({},DEF,{code,recs:{},mode:{},twinOpen:{},twinReveal:{}}); save();
+  pushCfg(); for(const s of students.values()) if(s.online&&s.dev){ rec(s.name); sendTo(s,{t:'mine',rec:S.recs[s.name]}); } save(); render(); toast('초기화했어요');
+}
+function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 지금 연결된 학생은 새 코드로 다시 들어와야 해요.')) return; S.code=newCode(); save(); students.clear(); showCode(); render(); openPeer(); }
+window.addEventListener('beforeunload',e=>{ if(onlineNames().size){ e.preventDefault(); e.returnValue=''; } });
+
+showCode(); render(); ICE_READY.then(()=>openPeer());
+</script>
+</body>
+</html>
