@@ -7,8 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="turn-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="unit.js"></script>
 <style>
 body{font-size:16px}
@@ -139,20 +140,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261123.3;            // index.html 과 같은 값이어야 함
-const ID_PREFIX='kgg-unitreview-v1-';
-const PEER_OPTS={debug:0, config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}]}};
-let TURN_ON=false;
-const ICE_READY=(async()=>{
-  const t=window.NB_TURN||{};
-  if(!t.appName||!t.apiKey||!/^[a-z0-9-]+$/i.test(t.appName)) return false;
-  try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),5000);
-    const r=await fetch(`https://${t.appName}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.apiKey)}`,{signal:ctl.signal}); clearTimeout(tm);
-    if(!r.ok) return false; const list=await r.json();
-    if(Array.isArray(list)&&list.length){ PEER_OPTS.config.iceServers=PEER_OPTS.config.iceServers.concat(list); TURN_ON=true; return true; } }catch(e){}
-  return false;
-})();
-
+const APP_VER=20261123.4;            // index.html 과 같은 값이어야 함
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
@@ -162,85 +150,62 @@ function toast(m,ms=2400){const t=$('toast');t.textContent=m;t.classList.add('on
 const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.map(c=>[c.k,c.short])), NUM='①②③④';
 const STALL_MIN=5;   // 이 시간(분) 동안 진행이 없으면 '도울 학생'에 표시
 const SKEY='ur-t2-'+U.id;
-const DEF={code:null, wait:60, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help'};
+const DEF={code:null, wait:60, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0};
 let S=Object.assign({},DEF,LS.get(SKEY,{}));
 function save(){ LS.set(SKEY,S); }
 function newCode(){ return String(Math.floor(1000+Math.random()*9000)); }
 if(!S.code){ S.code=LS.get('ur-t-'+U.id,{}).code||newCode(); save(); }
-const students=new Map();
-let peer=null, OPEN={};
+let LIVE={}, OPEN={}, OFFSET=0;   // LIVE: 서버의 학생 접속 정보 (이름 → p)
 $('ttl').textContent='교사용 · '+U.title; document.title='교사용 · '+U.title; $('pauseMsg').value=S.pauseMsg;
 
-/* ---------- 장부 ---------- */
+/* ---------- 장부 ----------
+   classes/{코드}/cfg          ← 이 화면이 씀 (기다리는 시간·문제별 잠금·멈춤·초기화 시각·버전)
+   classes/{코드}/stu/{이름}/rec ← 학생이 씀 (기록)
+   classes/{코드}/stu/{이름}/p   ← 학생이 씀 (접속 표시·현재 위치)
+   S.recs 는 서버 기록을 이 컴퓨터에도 복사해 둔 것 (CSV·백업용)
+------------------------------------------------------------ */
 function blank(){ return {diag:{},seen:{},hint:{},solved:{},twin:{},bas:{},loc:'',progT:0}; }
-function rec(name){ if(!S.recs[name]) S.recs[name]=blank(); const r=S.recs[name], b=blank(); for(const k in b) if(r[k]==null) r[k]=b[k]; return r; }
 function R(name){ return S.recs[name]||blank(); }
-function roster(){ const set=new Set(Object.keys(S.recs)); for(const s of students.values()) if(s.online&&s.dev) set.add(s.name); return [...set].sort((a,b)=>a.localeCompare(b,'ko',{numeric:true})); }
-function onlineNames(){ const set=new Set(); for(const s of students.values()) if(s.online&&s.dev) set.add(s.name); return set; }
+function roster(){ return Object.keys(S.recs).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true})); }
+function onlineNames(){ const set=new Set(); for(const n in LIVE) if(LIVE[n]&&LIVE[n].online) set.add(n); return set; }
 function modeOf(pid){ return S.mode[pid]||'all'; }
-function cfgMsg(){ return {t:'cfg',wait:S.wait,mode:S.mode}; }
-function sendTo(s,o){ try{ s.conn.send(o); }catch(e){} }
-function broadcast(o){ for(const s of students.values()) if(s.online) sendTo(s,o); }
-function pushCfg(){ save(); broadcast(cfgMsg()); render(); }
-function sendMine(name){ const r=S.recs[name]; if(!r) return; const {loc,progT,...mine}=r; for(const s of students.values()) if(s.online&&s.name===name) sendTo(s,{t:'mine',rec:mine}); }
+function now(){ return Date.now()+OFFSET; }
+const FB_OK=!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CONFIG.databaseURL);
+let db=null, base=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
+const fbKey=n=>encodeURIComponent(n).replace(/\./g,'%2E');
+const fbName=k=>{ try{ return decodeURIComponent(k); }catch(e){ return k; } };
+function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
+function pushCfg(){ save(); writeCfg(); render(); }
 
 /* ---------- 연결 ---------- */
 function studentURL(){ return location.href.replace(/[?#].*$/,'').replace(/teacher\.html$/,'')+'?c='+S.code; }
 function showCode(){ $('code').textContent=S.code; $('url').textContent=studentURL(); $('demoLink').href=studentURL().replace(/\?c=\d+$/,'?demo=1'); }
 function copyURL(){ const u=studentURL(); (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('학생 주소를 복사했어요')).catch(()=>{ prompt('학생 주소',u); }); }
-function openPeer(attempt=0){
-  try{ peer&&peer.destroy(); }catch(e){}
-  if(typeof Peer==='undefined'){ $('badge').textContent='연결 프로그램을 불러오지 못함'; $('peerErr').textContent='인터넷 연결을 확인하고 새로고침해 주세요.'; return; }
-  $('peerErr').textContent=''; $('badge').textContent='연결 준비 중…'; $('badge').classList.remove('on');
-  peer=new Peer(ID_PREFIX+'class-'+S.code,PEER_OPTS);
-  peer.on('open',()=>{ $('badge').textContent='● 학생 연결 받는 중'+(TURN_ON?' · 중계 서버 ✔':''); $('badge').classList.add('on'); });
-  peer.on('connection',c=>{
-    c._key='tmp-'+c.peer;
-    c.on('open',()=>{ students.set(c._key,{conn:c,name:'(이름 없음)',dev:null,online:true,seen:Date.now()}); sendTo({conn:c},cfgMsg()); sendTo({conn:c},{t:'pause',on:S.paused,msg:S.pauseMsg}); render(); });
-    c.on('data',d=>onData(c,d));
-    c.on('close',()=>{ const s=students.get(c._key); if(s&&s.conn===c){ s.online=false; render(); } });
-  });
-  peer.on('error',err=>{
-    if(err.type==='unavailable-id'){ $('badge').textContent='코드 사용 중'; $('badge').classList.remove('on'); $('peerErr').innerHTML='이 수업 코드가 다른 창에서 이미 열려 있어요. 그 창을 닫거나 [새 수업 코드 만들기]를 누르세요.'; return; }
-    if(['network','server-error','socket-error','socket-closed'].includes(err.type)){ $('badge').textContent='연결 끊김 · 다시 시도 중'; $('badge').classList.remove('on'); setTimeout(()=>openPeer(attempt+1),Math.min(10000,2000*(attempt+1))); }
-  });
-  peer.on('disconnected',()=>{ try{peer.reconnect();}catch(e){} });
+function openClass(){
+  if(!FB_OK||!db){ $('badge').textContent='연결 설정 필요'; $('peerErr').textContent='firebase-config.js에 Firebase 설정값이 아직 없어요.'; return; }
+  if(base){ try{ base.child('stu').off(); }catch(e){} }
+  base=db.ref('classes/'+S.code); LIVE={};
+  writeCfg();
+  base.child('stu').on('value',snap=>{ ingest(snap.val()||{}); render(); }, e=>{ $('peerErr').textContent='읽기 실패: '+e.message+' (데이터베이스 규칙을 확인하세요)'; });
 }
-// 끊김 확인 + '몇 분째 진행 없음' 갱신
-setInterval(()=>{ for(const s of students.values()){ if(s.online&&Date.now()-s.seen>12000){ s.online=false; try{s.conn.close();}catch(e){} } } render(); },5000);
-
+function startFB(){
+  if(!FB_OK||!db){ openClass(); return; }
+  db.ref('.info/connected').on('value',s=>{ const on=!!s.val(); $('badge').textContent=on?'● 연결됨':'연결 끊김 · 다시 연결하는 중'; $('badge').classList.toggle('on',on); if(on) $('peerErr').textContent=''; });
+  db.ref('.info/serverTimeOffset').on('value',s=>{ OFFSET=+s.val()||0; });
+  openClass();
+}
+/* 서버 기록 → 장부 (값 검사하며 옮김) */
+function ingest(all){
+  const live={};
+  for(const k in all){ const v=all[k]||{}, name=String((v.p&&v.p.name)||fbName(k)).slice(0,10); const p=v.p||{};
+    live[name]={online:p.online===true, ver:+p.ver||0, loc:String(p.loc||'').slice(0,30)};
+    if(v.rec){ const r=blank(); mergeRec(r,v.rec); r.loc=live[name].loc; r.progT=+v.rec.progT||0; S.recs[name]=r; }
+    else if(!S.recs[name]) S.recs[name]=blank();
+    S.recs[name].loc=live[name].loc;
+  }
+  LIVE=live; save();
+}
 const okPid=pid=>!!PBY[pid], okTid=tid=>!!TBY[tid], okB=k=>!!BBY[k];
-function progress(r){ r.progT=Date.now(); }
-function onData(c,d){
-  if(!d||typeof d!=='object') return;
-  const s=students.get(c._key); if(!s||s.conn!==c) return;
-  s.seen=Date.now(); if(!s.online){ s.online=true; render(); }
-  if(d.t==='ping'){ sendTo(s,{t:'pong'}); return; }
-  if(d.t==='hi'){
-    const dev=String(d.dev||'').slice(0,16);
-    if(dev&&c._key!=='dev-'+dev){ const key='dev-'+dev, old=students.get(key); if(old&&old.conn!==c){ try{old.conn.close();}catch(e){} } students.delete(c._key); c._key=key; students.set(key,s); }
-    s.dev=dev; s.name=String(d.name||'(이름 없음)').trim().slice(0,10)||'(이름 없음)'; s.ver=+d.ver||0;
-    sendTo(s,{t:'ver',v:APP_VER}); const r=rec(s.name); if(!r.progT) progress(r); save(); render(); return;
-  }
-  if(!s.dev) return;
-  const r=rec(s.name);
-  switch(d.t){
-    case 'sync': mergeRec(r,d.rec||{}); sendMine(s.name); break;
-    case 'loc': r.loc=String(d.v||'').slice(0,30); break;
-    case 'seen': if(okPid(d.pid)) r.seen[d.pid]=true; break;
-    case 'diag': if(okPid(d.pid)){ if(['o','t','x'].includes(d.v)) r.diag[d.pid]=d.v; else delete r.diag[d.pid]; progress(r); } break;
-    case 'hint': if(okPid(d.pid)){ const lv=Math.max(0,Math.min(PBY[d.pid].hints.length,+d.lv||0)), h=r.hint[d.pid]||{};
-      r.hint[d.pid]={lv:Math.max(h.lv||0,lv), sol:!!(h.sol||(d.sol&&modeOf(d.pid)==='all'))}; progress(r); } break;
-    case 'solved': if(okPid(d.pid)){ if(d.on){ const h=r.hint[d.pid]||{}; r.solved[d.pid]={lv:h.lv||0,sol:!!h.sol,cause:CN[d.cause]?d.cause:null}; } else delete r.solved[d.pid]; progress(r); } break;
-    case 'twinOpen': if(okTid(d.tid)){ r.twin[d.tid]=Object.assign({},r.twin[d.tid],{open:true}); progress(r); } break;
-    case 'twinAns': if(okTid(d.tid)){ const a=+d.a, cur=r.twin[d.tid]||{}; if(cur.a==null && a>=0 && a<TBY[d.tid].ch.length){ r.twin[d.tid]=Object.assign({},cur,{open:true,a}); progress(r); } } break;
-    case 'twinCause': if(okTid(d.tid)&&CN[d.cause]&&r.twin[d.tid]&&r.twin[d.tid].a!=null) r.twin[d.tid].cause=d.cause; break;
-    case 'bas': if(okB(d.type)){ const b=Object.assign({n:0,ok:0,streak:0,star:false,recent:[],ws:{}},r.bas[d.type]); const ok=!!d.ok;
-      b.n++; if(ok){ b.ok++; b.streak++; } else { b.streak=0; const w=Math.max(0,Math.min(5,+d.ws||0)); b.ws=Object.assign({},b.ws); b.ws[w]=(b.ws[w]||0)+1; }
-      if(b.streak>=3) b.star=true; b.recent=(b.recent||[]).concat([ok]).slice(-5); r.bas[d.type]=b; progress(r); } break;
-  }
-  save(); render();
-}
 function mergeRec(r,x){
   for(const pid in (x.diag||{})) if(okPid(pid)&&['o','t','x'].includes(x.diag[pid])&&!r.diag[pid]) r.diag[pid]=x.diag[pid];
   for(const pid in (x.seen||{})) if(okPid(pid)) r.seen[pid]=true;
@@ -249,17 +214,19 @@ function mergeRec(r,x){
   for(const tid in (x.twin||{})) if(okTid(tid)){ const y=x.twin[tid]||{}, cur=Object.assign({},r.twin[tid]); const a=+y.a;
     if(y.open) cur.open=true; if(cur.a==null&&y.a!=null&&a>=0&&a<TBY[tid].ch.length) cur.a=a; if(!cur.cause&&CN[y.cause]) cur.cause=y.cause;
     if(cur.open||cur.a!=null) r.twin[tid]=cur; }
-  for(const k in (x.bas||{})) if(okB(k)){ const y=x.bas[k]||{}, cur=r.bas[k]; if(!cur || (+y.n||0)>cur.n) r.bas[k]={n:+y.n||0,ok:+y.ok||0,streak:+y.streak||0,star:!!y.star,recent:Array.isArray(y.recent)?y.recent.slice(-5).map(Boolean):[],ws:(cur&&cur.ws)||{}}; }
+  for(const k in (x.bas||{})) if(okB(k)){ const y=x.bas[k]||{}, cur=r.bas[k]; if(!cur || (+y.n||0)>cur.n){ const ws={}; for(const w in (y.ws||{})) if(/^[0-5]$/.test(w)) ws[w]=+y.ws[w]||0;
+      const rc=Array.isArray(y.recent)?y.recent:Object.values(y.recent||{});
+      r.bas[k]={n:+y.n||0,ok:+y.ok||0,streak:+y.streak||0,star:!!y.star,recent:rc.slice(-5).map(Boolean),ws}; } }
 }
 
 /* ---------- 조작 ---------- */
 function setView(v){ S.view=v; save(); render(); }
-function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim()||'선생님을 봐 주세요'; save(); broadcast({t:'pause',on:S.paused,msg:S.pauseMsg}); render(); }
+function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim()||'선생님을 봐 주세요'; pushCfg(); }
 function setMode(pid,m){ S.mode[pid]=m; pushCfg(); }
 function setAllMode(m){ for(const p of P) S.mode[p.id]=m; pushCfg(); }
 function setWait(v){ S.wait=+v; pushCfg(); }
 function toggleNames(k){ OPEN[k]=!OPEN[k]; render(); }
-function removeName(n){ if(!confirm(`'${n}' 학생의 기록을 지울까요?`)) return; delete S.recs[n]; save(); render(); }
+function removeName(n){ if(!confirm(`'${n}' 학생의 기록을 지울까요?`)) return; delete S.recs[n]; save(); if(base) base.child('stu/'+fbKey(n)).remove(); render(); }
 
 /* ---------- 분석 ---------- */
 function flagsOf(n){
@@ -268,7 +235,7 @@ function flagsOf(n){
     if((d==='t'||d==='x') && !sv && (h.lv||0)>=p.hints.length) f.push({c:'r', t:`${p.no} 힌트 다 보고도 못 품${h.sol?' (풀이 봄)':''}`, w:3}); }
   for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok) f.push({c:'y', t:`확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${t.why[x.a]||''}`, w:2}); }
   for(const b of BT){ const x=r.bas[b.k]; if(x&&x.recent&&x.recent.length>=3&&x.recent.slice(-3).every(v=>!v)) f.push({c:'p', t:`기초 ${b.name}: 3번 연속 틀림`, w:3}); }
-  if(onlineNames().has(n) && r.progT && Date.now()-r.progT>STALL_MIN*60000) f.push({c:'g', t:`${Math.floor((Date.now()-r.progT)/60000)}분째 진행 없음`, w:1});
+  if(onlineNames().has(n) && r.progT && now()-r.progT>STALL_MIN*60000) f.push({c:'g', t:`${Math.floor((now()-r.progT)/60000)}분째 진행 없음`, w:1});
   return f;
 }
 function diagCounts(p,names){ const c={o:[],t:[],x:[],n:[]}; for(const n of names){ const m=R(n).diag[p.id]; (c[m]||c.n).push(n); } return c; }
@@ -295,7 +262,7 @@ function renderNow(){
 }
 function renderStudents(){
   const on=onlineNames(), names=roster();
-  const vers=[...students.values()].filter(s=>s.online&&s.dev&&s.ver&&s.ver!==APP_VER).length;
+  const vers=Object.values(LIVE).filter(x=>x.online&&x.ver&&x.ver!==APP_VER).length;
   $('stuCnt').textContent=`접속 ${on.size}명`+(vers?` · ⚠ 버전 다른 화면 ${vers}`:'');
   $('stuList').innerHTML= names.length? names.map(n=>`<li class="${on.has(n)?'':'off'}"><span class="dot ${on.has(n)?'on':''}"></span><span class="nm">${esc(n)}</span><span class="pr">${on.has(n)?esc(R(n).loc||''):'끊김'}</span>${on.has(n)?'':`<button class="rm" title="기록 지우기" onclick="removeName('${esc(n).replace(/'/g,"\\'")}')">✕</button>`}</li>`).join('')
     : '<li class="muted">아직 들어온 학생이 없어요. 학생 주소나 수업 코드를 알려 주세요.</li>';
@@ -403,18 +370,21 @@ function restore(inp){
   const f=inp.files[0]; if(!f) return; const rd=new FileReader();
   rd.onload=()=>{ try{ const o=JSON.parse(rd.result); if(!o||!o.state||typeof o.state.recs!=='object') throw 0;
     if(!confirm('백업 파일로 지금 기록을 바꿀까요? (수업 코드는 그대로)')) return;
-    const code=S.code; S=Object.assign({},DEF,o.state,{code}); save(); pushCfg(); for(const n in S.recs) sendMine(n); toast('불러왔어요'); }catch(e){ alert('백업 파일을 읽지 못했어요.'); } inp.value=''; };
+    const code=S.code; S=Object.assign({},DEF,o.state,{code}); save(); pushCfg();
+    if(base) for(const n in S.recs){ const {loc,progT,...r}=S.recs[n]; base.child('stu/'+fbKey(n)+'/rec').set(JSON.parse(JSON.stringify(r))); }
+    toast('불러왔어요'); }catch(e){ alert('백업 파일을 읽지 못했어요.'); } inp.value=''; };
   rd.readAsText(f);
 }
 function resetAll(){
   if(!confirm('학생 기록과 설정(기다리는 시간·문제별 잠금)을 모두 지울까요?\n먼저 [💾 백업]이나 [⬇ CSV]로 저장해 두는 것을 권해요.')) return;
-  const code=S.code; S=Object.assign({},DEF,{code,recs:{},mode:{}}); save(); pushCfg();
-  for(const s of students.values()) if(s.online&&s.dev){ rec(s.name); sendMine(s.name); } save(); render(); toast('초기화했어요');
+  const code=S.code; S=Object.assign({},DEF,{code,recs:{},mode:{},resetAt:now()}); save();
+  if(base) base.child('stu').remove();
+  pushCfg(); toast('초기화했어요');
 }
-function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 지금 연결된 학생은 새 코드로 다시 들어와야 해요.')) return; S.code=newCode(); save(); students.clear(); showCode(); render(); openPeer(); }
-window.addEventListener('beforeunload',e=>{ if(onlineNames().size){ e.preventDefault(); e.returnValue=''; } });
+function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 학생은 새 코드로 다시 들어와야 해요. (지금 기록은 이 컴퓨터에 남아 있어요)')) return; S.code=newCode(); save(); showCode(); openClass(); render(); }
 
-showCode(); render(); ICE_READY.then(()=>openPeer());
+setInterval(render,15000);   // '몇 분째 진행 없음' 갱신
+showCode(); render(); startFB();
 </script>
 </body>
 </html>

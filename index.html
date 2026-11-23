@@ -7,8 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="turn-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="unit.js"></script>
 <style>
 .wrap{max-width:1100px;margin:0 auto;padding:14px 16px 60px}
@@ -148,26 +149,13 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 </div>
 
 <div class="overlay" id="pauseOv"><div class="box"><div style="font-size:54px">✋</div><h2 style="margin:6px 0 8px">잠깐 멈춰요</h2><p id="pauseMsg" style="font-size:20px">선생님을 봐 주세요</p></div></div>
-<div class="overlay" id="gateOv"><div class="box"><div style="font-size:44px">🔌</div><h2 style="margin:6px 0 8px">선생님 화면과 연결이 끊겼어요</h2><p class="muted" id="gateTxt">다시 연결하는 중이에요. 잠시만 기다려 주세요.</p><button class="ghost" style="margin-top:14px" onclick="goHome()">처음 화면으로</button></div></div>
+
 <div class="overlay" id="askOv"><div class="box"><div style="font-size:40px">📕</div><h2 style="margin:6px 0 8px">확인 문제를 풀까요?</h2><p style="font-size:17px;line-height:1.7">학습지와 풀이를 덮고 <b>혼자</b> 풀어요.<br>답을 낼 때까지 이 문제의 <b>힌트·풀이가 닫히고</b>,<br>제출은 <b>한 번</b>만 할 수 있어요.</p>
   <div style="display:flex;gap:10px;margin-top:16px"><button class="ghost" style="flex:1" onclick="$('askOv').classList.remove('on')">아직이요</button><button class="acc" style="flex:1" id="askGo">풀게요</button></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261123.3;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
-const ID_PREFIX='kgg-unitreview-v1-';
-const PEER_OPTS={debug:0, config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}]}};
-let TURN_ON=false;
-const ICE_READY=(async()=>{
-  const t=window.NB_TURN||{};
-  if(!t.appName||!t.apiKey||!/^[a-z0-9-]+$/i.test(t.appName)) return false;
-  try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),5000);
-    const r=await fetch(`https://${t.appName}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.apiKey)}`,{signal:ctl.signal}); clearTimeout(tm);
-    if(!r.ok) return false; const list=await r.json();
-    if(Array.isArray(list)&&list.length){ PEER_OPTS.config.iceServers=PEER_OPTS.config.iceServers.concat(list); TURN_ON=true; return true; } }catch(e){}
-  return false;
-})();
-
+const APP_VER=20261123.4;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
@@ -415,7 +403,7 @@ function basStep(ok){
 }
 function basFinish(){
   const S=UI.BS; S.done=true; const k=UI.bt, st=Object.assign({n:0,ok:0,streak:0,star:false,recent:[]},REC.bas[k]);
-  st.n++; if(!S.wrong){ st.ok++; st.streak++; } else st.streak=0;
+  st.n++; if(!S.wrong){ st.ok++; st.streak++; } else { st.streak=0; const w=S.ws>0?S.ws:0; st.ws=Object.assign({},st.ws); st.ws[w]=(st.ws[w]||0)+1; }
   if(st.streak>=3) st.star=true; st.recent=(st.recent||[]).concat([!S.wrong]).slice(-5);
   REC.bas[k]=st; saveRec(); send({t:'bas',type:k,ok:!S.wrong,ws:S.ws>0?S.ws:0}); render();
 }
@@ -430,12 +418,50 @@ function tick(){
   if(left) tickH=setTimeout(tick,1000);
 }
 
-/* ---------- 수업 연결 ---------- */
-const CL={peer:null,conn:null,code:null,connected:false};
+/* ---------- 수업 연결 (Firebase Realtime Database) ----------
+   classes/{코드}/cfg          ← 선생님이 씀: 기다리는 시간, 문제별 잠금, 멈춤, 초기화 시각
+   classes/{코드}/stu/{이름}/rec ← 내 기록 (내가 씀)
+   classes/{코드}/stu/{이름}/p   ← 접속 표시·현재 위치 (내가 씀)
+------------------------------------------------------------ */
+const FB_OK=!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CONFIG.databaseURL);
+let db=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
+const TS=FB_OK?firebase.database.ServerValue.TIMESTAMP:0;
+const CL={code:null,key:null,base:null,connected:false};
 let deviceId; try{ deviceId=sessionStorage.getItem('ur-tab'); if(!deviceId){ deviceId=Math.random().toString(36).slice(2,12); sessionStorage.setItem('ur-tab',deviceId);} }catch(e){ deviceId=Math.random().toString(36).slice(2,12); }
+const fbKey=n=>encodeURIComponent(n).replace(/\./g,'%2E');
 function setState(t,ok){ const el=$('classState'); el.textContent=t; el.classList.toggle('ok',!!ok); }
-function send(o){ if(DEMO) return; try{ CL.conn&&CL.conn.open&&CL.conn.send(o); }catch(e){} }
-function hello(){ send({t:'hi',name:myName(),dev:deviceId,ver:APP_VER}); send({t:'sync',rec:REC}); lastLoc=''; reportLoc(); }
+function me(){ return CL.base.child('stu/'+CL.key); }
+/* 예전 메시지 방식 그대로 부름: loc 은 접속 표시에, 나머지는 내 기록을 올림 */
+function send(o){
+  if(DEMO||!CL.base) return;
+  if(o.t==='loc'){ me().child('p').update({loc:o.v}).catch(()=>{}); return; }
+  clearTimeout(CL.upT); CL.upT=setTimeout(upload,250);
+}
+function dbClean(x){ return JSON.parse(JSON.stringify(x,(k,v)=>v===undefined?null:v)); }
+function upload(){ if(!CL.base) return; const r=dbClean(REC); r.progT=TS; me().child('rec').set(r).catch(e=>toast('저장 실패: '+e.message)); }
+/* 기기 기록 + 서버 기록 합치기 (새로고침·기기 바꿈 대비) */
+function mergeRec(a,b){
+  const r=Object.assign(emptyRec(), JSON.parse(JSON.stringify(a||{})));
+  b=b||{};
+  for(const k in (b.diag||{})) if(!r.diag[k]) r.diag[k]=b.diag[k];
+  for(const k in (b.seen||{})) r.seen[k]=true;
+  for(const k in (b.hint||{})){ const x=r.hint[k]||{}, y=b.hint[k]||{}; r.hint[k]={lv:Math.max(x.lv||0,y.lv||0), sol:!!(x.sol||y.sol), t:x.t||0}; }
+  for(const k in (b.solved||{})) if(!r.solved[k]) r.solved[k]=b.solved[k];
+  for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null) x.a=y.a; if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
+  for(const k in (b.bas||{})){ const x=r.bas[k], y=b.bas[k]||{}; if(!x||(y.n||0)>(x.n||0)) r.bas[k]=y; }
+  r.resetSeen=Math.max(r.resetSeen||0,b.resetSeen||0);
+  return r;
+}
+function applyCfg(c){
+  if(!c) return;
+  if(c.resetAt && c.resetAt>(REC.resetSeen||0)){   // 선생님이 기록을 초기화함
+    REC=emptyRec(); REC.resetSeen=c.resetAt; saveRec(); upload(); toast('선생님이 기록을 새로 시작했어요');
+  }
+  CFG={wait:Math.max(0,+c.wait||0), mode:c.mode||{}};
+  $('pauseOv').classList.toggle('on',!!c.paused); if(c.pauseMsg) $('pauseMsg').textContent=c.pauseMsg;
+  const v=+c.ver||0; if(v&&v!==APP_VER&&CL.verWarn!==v){ CL.verWarn=v; const m=v>APP_VER?'⚠ 새 버전이 있어요. 이 화면을 새로고침해 주세요.':'⚠ 선생님 화면이 옛 버전이에요. 선생님께 새로고침을 부탁하세요.'; toast(m,6000); }
+  if(UI.view!=='bt') render();
+}
 function joinClick(){
   const code=$('classCode').value.replace(/\D/g,'');
   if(!$('myName').value.trim()){ setState('먼저 번호와 이름을 입력하세요.'); $('myName').focus(); return; }
@@ -444,68 +470,37 @@ function joinClick(){
   connect(code);
 }
 function showMain(){ $('home').classList.add('hide'); $('main').classList.remove('hide'); $('who').textContent='👤 '+myName(); render(); }
-function goHome(){ disconnect(); $('gateOv').classList.remove('on'); $('pauseOv').classList.remove('on'); $('main').classList.add('hide'); $('home').classList.remove('hide'); setState(''); }
+function goHome(){ disconnect(); $('pauseOv').classList.remove('on'); $('main').classList.add('hide'); $('home').classList.remove('hide'); setState(''); }
 function setConn(on){
-  CL.connected=on; $('connDot').classList.toggle('on',on); $('connTxt').textContent=on?'연결됨':'연결 끊김';
-  clearTimeout(CL.gateT);
-  if(on) $('gateOv').classList.remove('on');
-  else if(!$('main').classList.contains('hide')) CL.gateT=setTimeout(()=>{ if(!CL.connected&&!$('main').classList.contains('hide')) $('gateOv').classList.add('on'); },3000);
+  CL.connected=on; $('connDot').classList.toggle('on',on); $('connTxt').textContent=on?'연결됨':'연결 끊김 · 기록은 다시 연결되면 올라가요';
 }
-function disconnect(){ CL.code=null; clearTimeout(CL.retry); clearInterval(CL.hb); clearInterval(CL.watch); try{CL.conn&&CL.conn.close();}catch(e){} try{CL.peer&&CL.peer.destroy();}catch(e){} CL.peer=null; CL.conn=null; setConn(false); }
-function connect(code){ ICE_READY.then(()=>connectNow(code)); }
-function connectNow(code){
-  if(typeof Peer==='undefined'){ setState('인터넷 연결을 확인하고 새로고침해 주세요.'); return; }
-  const same=CL.code===code; clearTimeout(CL.retry); clearInterval(CL.hb); clearInterval(CL.watch);
-  try{CL.conn&&CL.conn.close();}catch(e){} try{CL.peer&&CL.peer.destroy();}catch(e){}
-  CL.code=code; CL.tries=same?(CL.tries||0)+1:1; if(!same) loadRec();
-  const tryTxt=CL.tries>1?` · ${CL.tries}번째 시도`:'';
-  setState('① 연결 서버에 접속하는 중…'+tryTxt);
-  const p=new Peer(PEER_OPTS); CL.peer=p;
-  const retryLater=msg=>{ setState(msg); $('gateTxt').textContent=msg; clearTimeout(CL.retry); CL.retry=setTimeout(()=>{ if(CL.code===code) connect(code); },6000); };
-  const D={t0:Date.now(),server:false};
-  CL.watch=setInterval(async()=>{
-    if(CL.peer!==p||CL.connected){ clearInterval(CL.watch); return; }
-    const pc=CL.conn&&CL.conn.peerConnection, sec=Math.round((Date.now()-D.t0)/1000);
-    if(D.server) setState((pc&&pc.remoteDescription?'③ 선생님 컴퓨터와 직접 연결하는 중… ':'② 선생님 화면을 찾는 중… ')+sec+'초'+tryTxt);
-    if(Date.now()-D.t0<15000) return;
-    clearInterval(CL.watch); let msg;
-    if(!D.server) msg='❌ ① 연결 서버에 접속하지 못했어요. 패드의 와이파이를 확인하세요.';
-    else if(!(pc&&pc.remoteDescription)) msg=`❌ ② 선생님 화면(수업 ${code})이 응답하지 않아요. 코드가 맞는지 확인하세요.`;
-    else { let types=new Set(); try{(await pc.getStats()).forEach(r=>{ if(r.type==='local-candidate') types.add(r.candidateType); });}catch(e){}
-      msg=`❌ ③ 선생님 컴퓨터와 직접 연결이 안 돼요. 학교 와이파이가 기기끼리 연결을 막는 것 같아요. (바깥 주소 ${types.has('srflx')?'✔':'✖'} · 중계 서버 ${TURN_ON?(types.has('relay')?'✔':'연결 안 됨'):'없음'})`; }
-    try{CL.conn&&CL.conn.close();}catch(e){} CL.conn=null; retryLater(msg+' — 잠시 후 다시 시도해요');
-  },500);
-  p.on('open',()=>{
-    D.server=true; setState('② 선생님 화면을 찾는 중…'+tryTxt);
-    const c=p.connect(ID_PREFIX+'class-'+code,{reliable:true}); CL.conn=c;
-    c.on('open',()=>{
-      CL.tries=0; clearInterval(CL.watch); CL.lastPong=Date.now(); setConn(true);
-      setState(`✔ 수업 ${code}에 연결됨`,true); hello(); if($('main').classList.contains('hide')) showMain();
-      clearInterval(CL.hb); CL.hb=setInterval(()=>{
-        if(CL.conn!==c){ clearInterval(CL.hb); return; }
-        if(Date.now()-CL.lastPong>12000){ clearInterval(CL.hb); setConn(false); CL.conn=null; try{c.close();}catch(e){} connect(code); return; }
-        send({t:'ping'});
-      },4000);
+function disconnect(){
+  clearTimeout(CL.upT); clearTimeout(CL.joinT);
+  if(CL.base){ try{ me().child('p').update({online:false}); me().child('p').onDisconnect().cancel(); }catch(e){} try{ CL.base.child('cfg').off(); }catch(e){} }
+  try{ db&&db.ref('.info/connected').off(); }catch(e){}
+  CL.base=null; CL.code=null; setConn(false);
+}
+function connect(code){
+  if(!FB_OK||!db){ setState('⚠ 연결 설정(firebase-config.js)이 아직 없어요. 선생님께 알려 주세요.'); return; }
+  disconnect(); CL.code=code; loadRec();
+  setState('수업을 찾는 중…');
+  const base=db.ref('classes/'+code), my=CL.code;
+  CL.joinT=setTimeout(()=>{ if(CL.code===my&&!CL.base) setState('⏳ 서버 응답이 늦어요. 와이파이를 확인하세요. 계속 기다리는 중…'); },10000);
+  base.child('cfg').once('value').then(snap=>{
+    if(CL.code!==my) return;
+    if(!snap.exists()){ clearTimeout(CL.joinT); CL.code=null; setState(`수업 ${code}을(를) 찾지 못했어요. 선생님 화면이 열려 있는지, 코드가 맞는지 확인하세요.`); return; }
+    CL.key=fbKey(myName()); CL.base=base;
+    return me().child('rec').once('value').then(rs=>{
+      clearTimeout(CL.joinT);
+      REC=mergeRec(REC, rs.val()); saveRec();
+      applyCfg(snap.val()); upload();
+      db.ref('.info/connected').on('value',s=>{ const on=!!s.val(); if(on&&CL.base===base){ const p=me().child('p'); p.onDisconnect().update({online:false}); p.update({online:true,name:myName(),dev:deviceId,ver:APP_VER,loc:lastLoc||'',t:TS}); } setConn(on); });
+      base.child('cfg').on('value',s=>applyCfg(s.val()));
+      setState(`✔ 수업 ${code}에 연결됨`,true); showMain(); lastLoc=''; reportLoc();
     });
-    c.on('data',d=>{ if(!d||typeof d!=='object') return; CL.lastPong=Date.now(); onData(d); });
-    c.on('close',()=>{ if(CL.conn!==c) return; setConn(false); $('pauseOv').classList.remove('on'); retryLater('선생님 화면과 연결이 끊겼어요. 다시 연결하는 중…'); });
-  });
-  p.on('error',err=>{
-    if(err.type==='peer-unavailable'){ clearInterval(CL.watch); retryLater(`수업 ${code}을(를) 찾지 못했어요. 선생님 화면이 열려 있는지, 코드가 맞는지 확인하세요.`); return; }
-    if(!CL.conn||!CL.conn.open) retryLater('연결 오류. 다시 연결하는 중…');
-  });
+  }).catch(e=>{ clearTimeout(CL.joinT); CL.code=null; CL.base=null; setState('❌ 연결 오류: '+e.message); });
 }
-function onData(d){
-  if(d.t==='cfg'){ CFG={wait:Math.max(0,+d.wait||0), mode:d.mode||{}}; if(!UI.BS||UI.view!=='bt') render(); }
-  else if(d.t==='mine'){
-    const r=d.rec||{}, old=REC; REC=Object.assign(emptyRec(), r);
-    for(const pid in REC.hint){ if(old.hint[pid]&&old.hint[pid].t) REC.hint[pid].t=old.hint[pid].t; }
-    saveRec(); if(UI.view!=='bt') render();
-  }
-  else if(d.t==='pause'){ $('pauseOv').classList.toggle('on',!!d.on); if(d.msg) $('pauseMsg').textContent=d.msg; }
-  else if(d.t==='ver'){ const v=+d.v||0; if(v&&v!==APP_VER){ const m=v>APP_VER?'⚠ 새 버전이 있어요. 이 화면을 새로고침해 주세요.':'⚠ 선생님 화면이 옛 버전이에요. 선생님께 새로고침을 부탁하세요.'; toast(m,6000); setState(m); } }
-  else if(d.t==='home'){ goHome(); }
-}
+function onData(){}
 
 /* ---------- 시작 ---------- */
 (function init(){
@@ -513,7 +508,8 @@ function onData(d){
   if(DEMO){ $('myName').value='시연'; loadRec(); $('connTxt').textContent='시연 (연결 없음)'; showMain(); return; }
   let code=null; try{ const q=new URLSearchParams(location.search).get('c'); if(q&&/^\d{4}$/.test(q)) code=q; }catch(e){}
   if(!code) code=LS.get('ur-class',null);
-  if(code){ $('classCode').value=code; if(n) setTimeout(()=>connect(code),300); else setState('번호와 이름을 입력하고 [수업 들어가기]를 누르세요.'); }
+  if(!FB_OK) setState('⚠ 연결 설정(firebase-config.js)이 아직 없어요.');
+  if(code){ $('classCode').value=code; if(n) setTimeout(()=>connect(code),200); else setState('번호와 이름을 입력하고 [수업 들어가기]를 누르세요.'); }
 })();
 $('myName').addEventListener('change',()=>{ LS.set('ur-name',$('myName').value.trim()); });
 </script>
