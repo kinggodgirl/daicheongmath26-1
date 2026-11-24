@@ -165,7 +165,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.9;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.10;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -177,7 +177,7 @@ function toast(m,ms=2400){const t=$('toast');t.textContent=m;t.classList.add('on
 const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.map(c=>[c.k,c.short])), NUM='①②③④';
 const STALL_MIN=5;   // 이 시간(분) 동안 진행이 없으면 '도울 학생'에 표시
 const SKEY='ur-t2-'+U.id;
-const DEF={code:null, wait:60, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0, ack:{}};
+const DEF={code:null, wait:30, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0, ack:{}};
 let S=Object.assign({},DEF,LS.get(SKEY,{}));
 function save(){ LS.set(SKEY,S); }
 function newCode(){ return String(Math.floor(1000+Math.random()*9000)); }
@@ -402,7 +402,7 @@ function grouped(fn){ let h=''; for(const gk in G){ const ps=P.filter(p=>p.group
 function panelProb(){
   const names=roster(), N=names.length;
   let h=`<div class="tool"><span class="info">다음 힌트까지 기다리는 시간</span>
-    <select onchange="setWait(this.value)">${[0,30,60,90,120,180].map(v=>`<option value="${v}" ${S.wait==v?'selected':''}>${v?v+'초':'바로'}</option>`).join('')}</select>
+    <select onchange="setWait(this.value)">${[...new Set([0,20,30,45,60,90,120,+S.wait||0])].sort((a,b)=>a-b).map(v=>`<option value="${v}" ${S.wait==v?'selected':''}>${v?v+'초':'바로'}</option>`).join('')}</select>
     <button class="ghost sm" onclick="setAllMode('all')">모두 '풀이 허용'</button><button class="ghost sm" onclick="setAllMode('hint')">모두 '풀이 막기'</button>
     <span class="muted">풀이 허용: 힌트를 다 본 학생은 풀이를 열 수 있음 · 잠금: 함께 볼 문제의 힌트를 닫음</span></div>`;
   h+=grouped(p=>{
