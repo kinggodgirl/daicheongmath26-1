@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>단원 마무리</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="unit.js"></script>
+<script src="units/list.js"></script>
 <style>
 .wrap{max-width:1100px;margin:0 auto;padding:14px 16px 60px}
 /* 첫 화면 */
@@ -44,6 +44,17 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .pcard.done{border-color:var(--o);background:#f6fbf8}
 .pcard.done .st{color:var(--o)}
 .pcard.miss .st{color:var(--x)}
+.prog{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:12px}
+.prog .pl{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+.prog .pb{height:12px;border-radius:99px;background:#ece7dc;overflow:hidden}
+.prog .pb div{height:100%;background:var(--o);border-radius:99px;transition:width .4s}
+.cheer{background:var(--o-soft);border:2px solid var(--o);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-weight:700}
+.pcard.nx{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.pcard .nxb{font-size:13px;font-weight:900;color:var(--acc);margin-top:2px}
+.refl{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;line-height:1.7}
+.refl .rh{font-weight:900;font-size:18px;margin-bottom:4px}
+.refl .rt{background:var(--acc-soft);border-radius:10px;padding:8px 12px;margin:6px 0;font-weight:700}
+.refl .mini{margin:2px 4px 2px 0}
 .bascall{margin-top:16px;background:#f4eefb;border:2px dashed #b89ad8;border-radius:16px;padding:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .bascall b{font-size:18px}
 .bascall button{background:#7a4fb5}
@@ -156,7 +167,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.2;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.5;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
@@ -164,6 +175,7 @@ const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.par
 function toast(m,ms=2600){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),ms);}
 const DEMO=(()=>{try{return new URLSearchParams(location.search).has('demo');}catch(e){return false;}})();
 const MK={o:'○',t:'△',x:'×'}, MKW={o:'맞았어요',t:'막혔어요',x:'틀렸어요'}, NUM='①②③④';
+if(!BT.length) $('navBas').classList.add('hide');   // 기초 연습이 없는 단원
 $('hTitle').textContent=U.title; $('hSub').textContent=U.sub; $('mTitle').textContent=U.title; document.title=U.title;
 
 /* ---------- 상태 ---------- */
@@ -230,24 +242,55 @@ function statusText(p){
   if(s.twinDone) return s.twinOk? ['✔ 확인 문제 ⭕','done'] : ['확인 문제 ❌ · 다시 보기','miss'];
   if(s.twinPending) return ['확인 문제 푸는 중',''];
   if(!s.d) return ['채점 전',''];
-  if(s.d==='o' || s.sv) return [(s.sv?'✔ 해결':'○ 맞음')+' · 확인 문제 남음',''];
+  if(s.d==='o' || s.sv) return s.tw? [(s.sv?'✔ 해결':'○ 맞음')+' · 확인 문제 남음',''] : [(s.sv?'✔ 해결':'✔ 맞음'),'done'];
   return [`${MK[s.d]} · ${s.lv?`힌트 ${s.lv}/${s.n}`:'다시 풀기'}`,''];
 }
+/* 완성: 확인 문제를 맞힘 (확인 문제가 없으면 해결) */
+function isDone(p){ const s=stOf(p); return s.tw? !!s.twinOk : (s.d==='o'||!!s.sv); }
+/* 다음에 하면 좋을 문제: 푸는 중인 확인 문제 → 다시 풀던 문제 → 확인 문제만 남은 문제 → 아직 안 본 문제 */
+function nextProb(){
+  const st=P.map(p=>[p,stOf(p)]);
+  const f=fn=>{ const x=st.find(([p,s])=>fn(p,s)); return x&&x[0]; };
+  return f((p,s)=>s.twinPending) || f((p,s)=>s.d&&s.d!=='o'&&!s.sv) || f((p,s)=>s.canTwin&&!s.tr.open) || f((p,s)=>!s.d) || null;
+}
 function viewList(){
-  let h=`<div class="phase-h">문제 목록</div><div class="phase-d">풀고 싶은 문제를 골라요. 문제마다 <b>① 채점 → ② 다시 풀기 → ③ 확인 문제</b> 순서로 진행해요.</div><div class="plist">`;
-  for(const p of P){ const [t,c]=statusText(p);
-    h+=`<button class="pcard ${c}" onclick="go('prob','${p.id}')"><span class="no">${p.no}</span><span><div class="tt">${p.title}</div><div class="st">${t}</div></span></button>`; }
-  h+=`</div><div class="bascall"><span style="font-size:34px">🧱</span><span style="flex:1"><b>도저히 못 풀겠다면?</b><br><span class="muted">기초 유형부터 차근차근 연습해요. 언제든 문제 목록으로 돌아올 수 있어요.</span></span><button onclick="go('bas')">기초 연습 하러 가기</button></div>`;
+  const done=P.filter(isDone).length, nx=nextProb(), pct=Math.round(done/P.length*100);
+  let h=`<div class="phase-h">문제 목록</div><div class="phase-d">풀고 싶은 문제를 골라요. 문제마다 <b>① 채점 → ② 다시 풀기${TW.length?' → ③ 확인 문제':''}</b> 순서로 진행해요.</div>`;
+  h+=`<div class="prog"><div class="pl"><b>완성 ${done} / ${P.length}</b><span class="muted">${TW.length?'확인 문제까지 맞히면 완성이에요':'해결하면 완성이에요'}</span></div><div class="pb"><div style="width:${pct}%"></div></div></div>`;
+  if(done===P.length) h+=`<div class="cheer">🎉 모든 문제를 완성했어요! 아래 <b>나의 돌아보기</b>를 읽고, 시간이 남으면 ${BT.length?'기초 연습에서 ⭐를 모아 보거나 ':''}친구를 도와주세요.</div>`;
+  h+=`<div class="plist">`;
+  for(const p of P){ const [t,c]=statusText(p), isNx=nx&&nx.id===p.id;
+    h+=`<button class="pcard ${c} ${isNx?'nx':''}" onclick="go('prob','${p.id}')"><span class="no">${p.no}</span><span><div class="tt">${p.title}</div><div class="st">${t}</div>${isNx?'<div class="nxb">👉 다음에 해 볼 문제</div>':''}</span></button>`; }
+  h+=`</div>`;
+  h+=reflectHTML();
+  if(!BT.length) return h;
+  h+=`<div class="bascall"><span style="font-size:34px">🧱</span><span style="flex:1"><b>도저히 못 풀겠다면?</b><br><span class="muted">기초 유형부터 차근차근 연습해요. 언제든 문제 목록으로 돌아올 수 있어요.</span></span><button onclick="go('bas')">기초 연습 하러 가기</button></div>`;
   return h;
 }
 
+/* 나의 돌아보기: 스스로 고른 '막힌 이유'와 확인 문제 결과를 모아 보여 줌 */
+function reflectHTML(){
+  const cnt={}, add=k=>{ if(k) cnt[k]=(cnt[k]||0)+1; };
+  for(const p of P){ const sv=REC.solved[p.id]; if(sv) add(sv.cause); }
+  for(const t of TW){ const x=REC.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok) add(x.cause); }
+  const marked=P.filter(p=>REC.diag[p.id]).length; if(!marked) return '';
+  const first=P.filter(p=>REC.diag[p.id]==='o').length, fixed=P.filter(p=>REC.solved[p.id]).length;
+  const wrong=TW.filter(t=>{ const x=REC.twin[t.id]; return x&&x.a!=null&&x.a!==t.ok; });
+  const stars=BT.filter(b=>REC.bas[b.k]&&REC.bas[b.k].star);
+  const tips={concept:'개념이 헷갈렸어요 → 🧱 개념 빈칸, 그림 보고 이름 고르기로 뜻부터 다져요.', idea:'아이디어가 안 떠올랐어요 → 풀이 아래 💡 한 줄 규칙을 공책에 옮겨 적어 두세요.', calc:'계산 실수가 있었어요 → 답을 내기 전에 한 번 더 계산해 보는 습관을 들여요.', unsure:'왜 막혔는지 잘 모르겠다면 → 선생님께 그 문제를 같이 봐 달라고 해요.'};
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+  let h=`<div class="refl"><div class="rh">🪞 나의 돌아보기</div><div class="rl">처음부터 맞힌 문제 <b>${first}</b>개 · 다시 풀어 해결한 문제 <b>${fixed}</b>개${TW.length?` · 확인 문제 ⭕ <b>${TW.filter(t=>{const x=REC.twin[t.id]; return x&&x.a===t.ok;}).length}</b>개`:''}${stars.length?` · 기초 ⭐ <b>${stars.length}</b>개`:''}</div>`;
+  if(top.length) h+=`<div class="rl">내가 고른 막힌 이유: ${top.map(([k,v])=>`${(CAUSE.find(c=>c.k===k)||{}).short||k} <b>${v}</b>`).join(' · ')}</div><div class="rt">${tips[top[0][0]]||''}</div>`;
+  if(wrong.length) h+=`<div class="rl">확인 문제를 틀린 문제 ${wrong.map(t=>`<button class="ghost mini" onclick="go('prob','${t.of}')">${PBY[t.of].no} 다시 보기</button>`).join(' ')}</div>`;
+  return h+`</div>`;
+}
 /* ---------- 문제 하나 ---------- */
 function probBox(p){ const f=p.fig?p.fig():''; return `<div class="pbox ${f?'':'nofig'}"><div class="ptext">${p.text}</div>${f?`<div class="figw">${f}</div>`:''}</div>`; }
 function viewProb(p){
   const s=stOf(p);
   const step= s.twinPending||s.twinDone ? 3 : (!s.d ? 1 : (s.canTwin ? 3 : 2));
   let h=`<div class="phead"><span class="no">${p.no}</span><span class="tt">${p.title}</span><button class="ghost mini" onclick="go('list')">← 목록</button></div>
-    <div class="flow">${['① 채점','② 다시 풀기','③ 확인 문제'].map((x,i)=>`<span class="${i+1===step?'cur':(i+1<step?'ok':'')}">${x}</span>`).join('')}</div>`;
+    <div class="flow">${['① 채점','② 다시 풀기','③ 확인 문제'].slice(0,s.tw?3:2).map((x,i)=>`<span class="${i+1===step?'cur':(i+1<step?'ok':'')}">${x}</span>`).join('')}</div>`;
   if(s.twinPending){
     return h+`<div class="card">${twinBlock(p,s)}<div class="lockmsg" style="margin-top:14px">📕 확인 문제를 내면 이 문제의 힌트·풀이가 다시 열려요.</div></div>`;
   }
@@ -269,10 +312,10 @@ function viewProb(p){
     if(s.d!=='o' && !s.sv){
       h+=`<div class="muted">힌트를 하나 열고 <b>종이에 다시 풀어 보세요.</b> 그래도 막히면 다음 힌트를 열어요.</div>`+hintSection(p,s);
       if(UI.causeFor===p.id) h+=`<div style="margin-top:14px;font-weight:900">처음에 왜 막혔나요? (틀렸나요?)</div><div class="causes">${CAUSE.map(c=>`<button onclick="solve('${p.id}','${c.k}')">${c.label}</button>`).join('')}</div>`;
-      else h+=`<div class="next"><button style="background:var(--o)" onclick="UI.causeFor='${p.id}';render()">✔ 이제 풀 수 있어요</button></div>`;
+      else h+=`<div class="next"><button style="background:var(--o)" onclick="UI.causeFor='${p.id}';render();reveal('.causes')">✔ 이제 풀 수 있어요</button></div>`;
       if(s.lv>=s.n) h+=basicSuggest(p,'힌트를 다 봐도 어렵다면, 기초부터 다져 볼까요?');
     } else {
-      h+= s.sv? `<span class="done">✔ 해결했어요</span>${!s.tr.open?` <button class="ghost mini" onclick="unsolve('${p.id}')">취소</button>`:''}` : `<span class="muted">처음부터 맞힌 문제예요. 바로 확인 문제로 가도 돼요.</span>`;
+      h+= s.sv? `<span class="done">✔ 해결했어요</span>${!s.tr.open?` <button class="ghost mini" onclick="unsolve('${p.id}')">취소</button>`:''}` : `<span class="muted">처음부터 맞힌 문제예요.${s.tw?' 바로 확인 문제로 가도 돼요.':''}</span>`;
       h+=`<div style="margin-top:8px"><button class="ghost mini" onclick="UI.showHints['${p.id}']=!UI.showHints['${p.id}'];render()">${UI.showHints[p.id]?'힌트 접기':'힌트·풀이 다시 보기'}</button></div>`;
       if(UI.showHints[p.id]) h+=hintSection(p,s);
     }
@@ -287,7 +330,10 @@ function viewProb(p){
   }
   return h+`</div>`;
 }
-function seeAns(pid){ REC.seen[pid]=true; saveRec(); send({t:'seen',pid}); render(); }
+/* 새로 열린 내용이 화면 아래에 숨지 않게 그 자리로 부드럽게 옮김 */
+function reveal(sel){ requestAnimationFrame(()=>{ const els=document.querySelectorAll('#view '+sel), el=els[els.length-1]; if(!el) return;
+  const r=el.getBoundingClientRect(); if(r.top<70||r.bottom>innerHeight-20) el.scrollIntoView({behavior:'smooth',block:r.height>innerHeight*0.6?'start':'center'}); }); }
+function seeAns(pid){ REC.seen[pid]=true; saveRec(); send({t:'seen',pid}); render(); reveal('.marks'); }
 function setDiag(pid,k){ if(k) REC.diag[pid]=k; else delete REC.diag[pid]; saveRec(); send({t:'diag',pid,v:k||null}); render(); }
 function hintSection(p,s){
   const md=modeOf(p.id), lv=s.lv, n=s.n; let h='';
@@ -304,12 +350,13 @@ function hintSection(p,s){
   return h;
 }
 function openHint(pid){ const p=PBY[pid]; if(modeOf(pid)==='lock'||waitLeft(pid)) return;
-  const lv=Math.min(p.hints.length,hintLv(pid)+1); REC.hint[pid]=Object.assign({},REC.hint[pid],{lv,t:Date.now()}); saveRec(); send({t:'hint',pid,lv}); render(); }
+  const lv=Math.min(p.hints.length,hintLv(pid)+1); REC.hint[pid]=Object.assign({},REC.hint[pid],{lv,t:Date.now()}); saveRec(); send({t:'hint',pid,lv}); render(); reveal('.hcard'); }
 function openSol(pid){ if(modeOf(pid)!=='all'||waitLeft(pid)) return;
-  REC.hint[pid]=Object.assign({},REC.hint[pid],{sol:true}); saveRec(); send({t:'hint',pid,lv:hintLv(pid),sol:true}); render(); }
+  REC.hint[pid]=Object.assign({},REC.hint[pid],{sol:true}); saveRec(); send({t:'hint',pid,lv:hintLv(pid),sol:true}); render(); reveal('.hcard.sol'); }
 function solve(pid,cause){ REC.solved[pid]={lv:hintLv(pid),cause,sol:!!(REC.hint[pid]&&REC.hint[pid].sol)}; UI.causeFor=null; saveRec(); send({t:'solved',pid,on:true,cause}); render(); toast('좋아요! 이제 확인 문제로 실력을 확인해요'); }
 function unsolve(pid){ delete REC.solved[pid]; saveRec(); send({t:'solved',pid,on:false}); render(); }
 function basicSuggest(p,msg){
+  if(!BT.length) return '';
   const ks=(U.basicFor||{})[p.id]||[];
   return `<div class="suggest"><div class="b">🧱 ${msg}</div>${ks.map(k=>`<button onclick="go('bt','${k}')">${BBY[k].name}</button>`).join('')}<button style="background:#fff;color:#7a4fb5;border:2px solid #b89ad8" onclick="go('bas','${p.id}')">다른 기초 유형</button></div>`;
 }
@@ -333,7 +380,7 @@ function twinBlock(p,s){
   return h+`</div>`;
 }
 function submitTwin(tid){ const a=UI.twinPick[tid]; if(a==null||(REC.twin[tid]&&REC.twin[tid].a!=null)) return;
-  REC.twin[tid]=Object.assign({},REC.twin[tid],{a,open:true}); saveRec(); send({t:'twinAns',tid,a}); render(); }
+  REC.twin[tid]=Object.assign({},REC.twin[tid],{a,open:true}); saveRec(); send({t:'twinAns',tid,a}); render(); reveal('.verdict'); }
 function twinCause(tid,c){ REC.twin[tid]=Object.assign({},REC.twin[tid],{cause:c}); saveRec(); send({t:'twinCause',tid,cause:c}); render(); }
 
 /* ---------- 기초 연습 ---------- */
@@ -387,10 +434,17 @@ function viewBT(){
   }
   return h+`</div>`;
 }
-function numEq(v,a){ const x=parseFloat(String(v).replace(/[^\d.\-]/g,'')); return Number.isFinite(x) && Math.abs(x-a)<1e-9; }
+/* 학생이 쓴 답을 수로 읽기: 3, -2, 1.5, 3/2 를 받음 (π·단위·띄어쓰기는 지움). 수가 아니면 null */
+function parseNum(v){
+  let t=String(v).replace(/[\sπ]|cm²|cm|°|㎠/g,'').replace(/,/g,'').replace(/[－−]/g,'-').replace(/／/g,'/');
+  if(!/^-?\d*\.?\d+(\/\d*\.?\d+)?$/.test(t)) return null;
+  const [a,b]=t.split('/'); const x=b==null?+a:(+a)/(+b); return Number.isFinite(x)?x:null;
+}
+function numEq(v,a){ const x=parseNum(v); return x!=null && Math.abs(x-a)<1e-9; }
 function basPickMC(i){ const S=UI.BS; if(S.done) return; S.picked=i; S.wrong= i!==S.it.ok; basFinish(); }
 function basSubmitNum(){
   const S=UI.BS, inp=document.querySelector('#view input.ans'); if(!inp||S.done) return; const v=inp.value.trim(); if(!v) return;
+  if(parseNum(v)==null){ toast('숫자만 넣어 주세요. (π와 단위는 칸 옆에 있어요 · 분수는 3/2처럼)'); inp.select(); return; }
   if(S.mode==='direct'){
     if(numEq(v,S.it.ans)){ S.msg=''; basFinish(); }
     else { S.wrong=true; S.ws=S.ws||-1; if(S.it.steps.length){ S.mode='steps'; S.si=0; S.tries=0; S.msg='아쉬워요. 단계로 나눠서 다시 풀어 봐요.'; } else { basFinish(); } render(); }
@@ -498,6 +552,12 @@ function connect(code){
   authReady().then(uid=>(CL.uid=uid, base.child('cfg').once('value').then(snap=>{
     if(CL.code!==my) return;
     if(!snap.exists()){ clearTimeout(CL.joinT); CL.code=null; setState(`수업 ${code}을(를) 찾지 못했어요. 선생님 화면이 열려 있는지, 코드가 맞는지 확인하세요.`); return; }
+    /* 선생님이 고른 단원이 지금 화면과 다르면 그 단원으로 다시 열기 */
+    const cu=(snap.val()||{}).unit;
+    if(cu && cu!==U.id){ clearTimeout(CL.joinT);
+      if(unitExists(cu)){ setState('수업 단원으로 바꾸는 중…'); LS.set('ur-unit',cu); location.replace(location.pathname+'?c='+code+'&u='+encodeURIComponent(cu)); }
+      else { CL.code=null; setState('이 수업의 단원을 찾지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.'); }
+      return; }
     cfgSnap=snap; CL.key=fbKey(myName()); CL.base=base;
     /* 이 이름을 이 기기 것으로 표시 (다른 기기가 먼저 쓰고 있으면 규칙이 막음) */
     return me().child('uid').set(uid).catch(e=>{

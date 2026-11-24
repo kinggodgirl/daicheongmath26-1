@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="unit.js"></script>
+<script src="units/list.js"></script>
 <style>
 body{font-size:16px}
 .wrap{max-width:1380px;margin:0 auto;padding:14px 18px 40px}
@@ -103,6 +103,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="wrap">
   <div class="head">
     <h1 id="ttl">교사용</h1>
+    <select id="unitSel" title="단원 바꾸기" onchange="switchUnit(this.value)" style="font-size:15px;padding:6px 8px"></select>
     <div class="codebox"><span class="muted">수업 코드</span><span class="code" id="code">----</span></div>
     <div><div class="url" id="url"></div><button class="ghost sm" onclick="copyURL()" style="margin-top:4px">학생 주소 복사</button></div>
     <span class="sp"></span>
@@ -122,7 +123,15 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
         <div class="btns"><button class="ghost sm" onclick="exportCSV()">⬇ CSV</button><button class="ghost sm" onclick="backup()">💾 백업</button>
         <button class="ghost sm" onclick="$('restoreFile').click()">📂 불러오기</button><button class="ghost sm" onclick="resetAll()">🔄 초기화</button>
         <button class="ghost sm" onclick="changeCode()" style="grid-column:1/3">새 수업 코드 만들기</button>
-        <button class="ghost sm" onclick="toggleMerge()" style="grid-column:1/3">🔗 두 기록 합치기</button></div>
+        <button class="ghost sm" onclick="toggleMerge()" style="grid-column:1/3">🔗 두 기록 합치기</button>
+        <button class="ghost sm" onclick="$('carryBox').classList.toggle('hide')" style="grid-column:1/3">💻 다른 컴퓨터에서 이어 쓰기</button></div>
+        <div id="carryBox" class="hide" style="margin-top:10px;padding:10px;border-radius:10px;background:#f7f4ee;font-size:14px;line-height:1.6">
+          <b>이 수업을 다른 컴퓨터에서 열려면</b><br>그 컴퓨터의 교사 화면에서 아래 코드와 열쇠를 넣으세요.
+          <div style="font-size:20px;font-weight:900;margin:4px 0">코드 <span id="kCode"></span> · 열쇠 <span id="kKey" style="letter-spacing:2px;color:var(--acc)"></span></div>
+          <div class="muted" style="font-size:13px">열쇠는 학생에게 보여 주지 마세요. (화면을 띄울 때는 이 칸을 닫아 두세요)</div>
+          <div style="border-top:1px dashed var(--line);margin:10px 0 8px"></div>
+          <b>다른 컴퓨터의 수업을 여기로 가져오기</b>
+          <div style="display:flex;gap:6px;margin-top:6px"><input id="jCode" inputmode="numeric" maxlength="4" placeholder="코드" style="width:5.5em;font-size:15px;padding:6px"><input id="jKey" maxlength="6" placeholder="열쇠" autocomplete="off" style="width:6.5em;font-size:15px;padding:6px;text-transform:uppercase"><button class="sm" onclick="joinExisting()">가져오기</button></div></div>
         <div id="mergeBox" class="hide" style="margin-top:10px;padding:10px;border-radius:10px;background:#f7f4ee;font-size:14px">
           <div class="muted" style="font-size:13px;margin-bottom:6px">한 학생이 이름을 다르게 써서 기록이 둘로 나뉘었을 때 씁니다.</div>
           <select id="mFrom" style="width:100%;font-size:14px;padding:6px"></select>
@@ -148,9 +157,10 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.2;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.5;            // index.html 과 같은 값이어야 함
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
+for(const p of P) if(!TOF[p.id]) TOF[p.id]={id:'none-'+p.id, of:p.id, ch:['-'], ok:0, why:[''], none:true};   // 확인 문제가 없는 문제
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -158,7 +168,7 @@ function toast(m,ms=2400){const t=$('toast');t.textContent=m;t.classList.add('on
 const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.map(c=>[c.k,c.short])), NUM='①②③④';
 const STALL_MIN=5;   // 이 시간(분) 동안 진행이 없으면 '도울 학생'에 표시
 const SKEY='ur-t2-'+U.id;
-const DEF={code:null, wait:60, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0};
+const DEF={code:null, wait:60, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0, ack:{}};
 let S=Object.assign({},DEF,LS.get(SKEY,{}));
 function save(){ LS.set(SKEY,S); }
 function newCode(){ return String(Math.floor(1000+Math.random()*9000)); }
@@ -182,28 +192,71 @@ const FB_OK=!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CON
 let db=null, base=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
 const fbKey=n=>encodeURIComponent(n).replace(/\./g,'%2E');
 const fbName=k=>{ try{ return decodeURIComponent(k); }catch(e){ return k; } };
-function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
+function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, unit:U.id, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
 function pushCfg(){ save(); writeCfg(); render(); }
 
 /* ---------- 연결 ---------- */
 function studentURL(){ return location.href.replace(/[?#].*$/,'').replace(/teacher\.html$/,'')+'?c='+S.code; }
-function showCode(){ $('code').textContent=S.code; $('url').textContent=studentURL(); $('demoLink').href=studentURL().replace(/\?c=\d+$/,'?demo=1'); }
+function showCode(){ $('code').textContent=S.code; $('kCode').textContent=S.code; $('kKey').textContent=S.key||'만드는 중…'; $('url').textContent=studentURL(); $('demoLink').href=studentURL().replace(/\?c=\d+$/,'?demo=1&u='+encodeURIComponent(U.id)); }
+/* 단원 바꾸기: 단원마다 수업 코드·기록·설정이 따로 저장돼요 */
+function switchUnit(id){ if(id===U.id) return; location.href=location.pathname+'?u='+encodeURIComponent(id); }
+$('unitSel').innerHTML=UNITS.map(u=>`<option value="${esc(u.id)}" ${u.id===U.id?'selected':''}>${esc(u.title)}</option>`).join('');
+if(UNITS.length<2) $('unitSel').classList.add('hide');
+if(!BT.length) document.querySelector('#tabs button[data-v=bas]').classList.add('hide');
 function copyURL(){ const u=studentURL(); (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('학생 주소를 복사했어요')).catch(()=>{ prompt('학생 주소',u); }); }
 function openClass(tries=0){
   if(!FB_OK||!db){ $('badge').textContent='연결 설정 필요'; $('peerErr').textContent='firebase-config.js에 Firebase 설정값이 아직 없어요.'; return; }
-  if(base){ try{ base.child('stu').off(); }catch(e){} }
+  if(base){ try{ base.child('stu').off(); base.child('cfg').off(); }catch(e){} }
   base=null; LIVE={};
   const code=S.code, ref=db.ref('classes/'+code);
-  authReady().then(uid=>ref.child('owner').set(uid).then(()=>{
+  authReady().then(uid=>claimClass(ref,uid).then(()=>ref.child('cfg').once('value').catch(()=>null)).then(cs=>{
     if(S.code!==code) return;
-    base=ref; writeCfg();
+    if(cs) adoptCfg(cs.val());   // 서버에 있는 설정이 먼저 (다른 컴퓨터에서 바꿨을 수 있음)
+    base=ref; ensureKey(); writeCfg();
     base.child('stu').on('value',snap=>{ ingest(snap.val()||{}); render(); }, e=>{ $('peerErr').textContent='읽기 실패: '+e.message+' (데이터베이스 규칙을 확인하세요)'; });
+    /* 다른 컴퓨터의 교사 화면이 바꾼 설정(멈춤·기다리는 시간·잠금)도 따라감 */
+    base.child('cfg').on('value',snap=>{ if(S.code===code && adoptCfg(snap.val())) render(); });
   }, e=>{
     if(S.code!==code) return;
     /* 이 코드는 다른 교사 화면(또는 다른 브라우저)이 이미 쓰고 있음 → 새 코드로 */
-    if(isDenied(e) && tries<5){ S.code=newCode(); save(); showCode(); toast(`수업 코드 ${code}는 다른 화면에서 쓰고 있어서 새 코드 ${S.code}를 만들었어요`,5000); openClass(tries+1); return; }
+    if(isDenied(e) && tries<5){ S.code=newCode(); S.key=null; save(); showCode(); toast(`수업 코드 ${code}는 다른 화면에서 쓰고 있어서 새 코드 ${S.code}를 만들었어요`,5000); openClass(tries+1); return; }
     throw e;
   })).catch(e=>{ $('peerErr').textContent=authMsg(e); });
+}
+/* 서버 설정을 이 화면에 반영. 바뀐 게 있으면 true */
+function adoptCfg(c){
+  if(!c) return false;
+  const n={wait:c.wait!=null?Math.max(0,+c.wait||0):S.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||S.pauseMsg, resetAt:Math.max(+c.resetAt||0,S.resetAt||0)};
+  const cur={wait:S.wait,mode:S.mode,paused:S.paused,pauseMsg:S.pauseMsg,resetAt:S.resetAt||0};
+  if(JSON.stringify(n)===JSON.stringify(cur)) return false;
+  if(n.resetAt>(S.resetAt||0)) S.recs={};   // 다른 화면에서 초기화함
+  Object.assign(S,n); save(); $('pauseMsg').value=S.pauseMsg; return true;
+}
+/* 코드 주인이 되거나(처음 연 화면), 열쇠로 들어온 화면이면 열쇠로 다시 들어감 */
+function claimClass(ref,uid){
+  return ref.child('owner').set(uid).catch(e=>{ if(!isDenied(e)||!S.key) throw e; return ref.child('owners/'+uid).set(S.key); });
+}
+/* 이어 쓰기 열쇠: 6글자 (헷갈리는 0·O·1·I 빼고) */
+function newKey(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r=new Uint32Array(6); crypto.getRandomValues(r); return Array.from(r,x=>A[x%A.length]).join(''); }
+function ensureKey(){
+  if(!S.key){ S.key=newKey(); save(); showCode(); }
+  base.child('keys/'+S.key).set(true).catch(e=>{ $('peerErr').textContent='이어 쓰기 열쇠 저장 실패: 데이터베이스 규칙을 새로 게시했는지 확인하세요. ('+e.message+')'; });
+}
+function joinExisting(){
+  const code=$('jCode').value.replace(/\D/g,''), key=$('jKey').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(code.length!==4||key.length!==6){ toast('코드 4자리와 열쇠 6글자를 넣으세요'); return; }
+  if(code===S.code){ toast('지금 이 화면의 수업이에요'); return; }
+  if(!FB_OK||!db) return;
+  if(!confirm(`지금 화면의 수업(코드 ${S.code}) 대신 코드 ${code} 수업을 이어서 볼까요?\n지금 기록이 필요하면 먼저 [💾 백업]하세요.`)) return;
+  const ref=db.ref('classes/'+code);
+  authReady().then(uid=>ref.child('owners/'+uid).set(key)).then(()=>ref.child('cfg').once('value')).then(snap=>{
+    const c=snap.val()||{};
+    if(c.unit && c.unit!==U.id){ const u=UNITS.find(x=>x.id===c.unit); toast(`이 수업은 '${u?u.title:c.unit}' 단원이에요. 위에서 단원을 바꾼 뒤 다시 가져오세요.`,6000); return; }
+    if(base){ try{ base.child('stu').off(); base.child('cfg').off(); }catch(e){} }
+    S=Object.assign({},DEF,{code,key,view:S.view,recs:{}, wait:c.wait!=null?Math.max(0,+c.wait||0):DEF.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||DEF.pauseMsg, resetAt:+c.resetAt||0});
+    save(); $('pauseMsg').value=S.pauseMsg; $('jCode').value=''; $('jKey').value=''; $('carryBox').classList.add('hide');
+    showCode(); openClass(); render(); toast(`수업 ${code}을(를) 이어서 열었어요`,4000);
+  }).catch(e=>{ toast(isDenied(e)?'코드나 열쇠가 맞지 않아요':authMsg(e),5000); });
 }
 /* 익명 로그인: 이 브라우저에 보이지 않는 번호(uid)가 생기고, 이 번호가 수업 코드의 주인이 됨 */
 let authP=null;
@@ -281,12 +334,15 @@ function removeName(n){ if(!confirm(`'${n}' 학생의 기록을 지울까요?`))
 function flagsOf(n){
   const r=R(n), f=[];
   for(const p of P){ const d=r.diag[p.id], h=r.hint[p.id]||{}, sv=r.solved[p.id];
-    if((d==='t'||d==='x') && !sv && (h.lv||0)>=p.hints.length) f.push({c:'r', t:`${p.no} 힌트 다 보고도 못 품${h.sol?' (풀이 봄)':''}`, w:3}); }
-  for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok) f.push({c:'y', t:`확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${t.why[x.a]||''}`, w:2}); }
-  for(const b of BT){ const x=r.bas[b.k]; if(x&&x.recent&&x.recent.length>=3&&x.recent.slice(-3).every(v=>!v)) f.push({c:'p', t:`기초 ${b.name}: 3번 연속 틀림`, w:3}); }
-  if(onlineNames().has(n) && r.progT && now()-r.progT>STALL_MIN*60000) f.push({c:'g', t:`${Math.floor((now()-r.progT)/60000)}분째 진행 없음`, w:1});
-  return f;
+    if((d==='t'||d==='x') && !sv && (h.lv||0)>=p.hints.length) f.push({c:'r', k:p.id+(h.sol?'s':''), t:`${p.no} 힌트 다 보고도 못 품${h.sol?' (풀이 봄)':''}`, w:3}); }
+  for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok) f.push({c:'y', k:t.id, t:`확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${t.why[x.a]||''}`, w:2}); }
+  for(const b of BT){ const x=r.bas[b.k]; if(x&&x.recent&&x.recent.length>=3&&x.recent.slice(-3).every(v=>!v)) f.push({c:'p', k:b.k+'-'+x.n, t:`기초 ${b.name}: 3번 연속 틀림`, w:3}); }
+  if(onlineNames().has(n) && r.progT && now()-r.progT>STALL_MIN*60000) f.push({c:'g', k:'stall-'+r.progT, t:`${Math.floor((now()-r.progT)/60000)}분째 진행 없음`, w:1});
+  const ack=(S.ack||{})[n]||[];
+  return f.filter(x=>!ack.includes(x.k));
 }
+/* '도왔어요': 지금 보이는 알림만 숨김. 새로 막히면 다시 나타남 */
+function ackHelp(n){ const f=flagsOf(n); S.ack=Object.assign({},S.ack); S.ack[n]=((S.ack[n])||[]).concat(f.map(x=>x.k)).slice(-50); save(); render(); toast(`'${n}' 학생 알림을 정리했어요. 새로 막히면 다시 나타나요`); }
 function diagCounts(p,names){ const c={o:[],t:[],x:[],n:[]}; for(const n of names){ const m=R(n).diag[p.id]; (c[m]||c.n).push(n); } return c; }
 function barHTML(c,total){ const w=k=>total?c[k].length/total*100:0; return `<div class="bar">${['o','t','x','n'].map(k=>c[k].length?`<div class="seg-${k}" style="width:${w(k)}%">${k==='n'?'':MK[k]+' '}${c[k].length}</div>`:'').join('')}</div>`; }
 function tags(arr){ return arr.length? arr.map(n=>`<span class="tag">${esc(n)}</span>`).join('') : '<span class="muted">없음</span>'; }
@@ -321,9 +377,10 @@ function summaryOf(n){ const r=R(n); const solved=P.filter(p=>r.diag[p.id]==='o'
 function panelHelp(){
   const names=roster(), on=onlineNames();
   const rows=names.map(n=>({n,f:flagsOf(n)})).filter(x=>x.f.length).sort((a,b)=>b.f.reduce((s,x)=>s+x.w,0)-a.f.reduce((s,x)=>s+x.w,0));
-  let h=`<div class="tool"><span class="muted">힌트를 다 보고도 못 푼 학생, 확인 문제를 틀린 학생, 기초 연습에서 연속으로 틀리는 학생, ${STALL_MIN}분 넘게 진행이 없는 학생이 모여요. 학생이 해결하면 자동으로 사라져요.</span></div>`;
+  let h=`<div class="tool"><span class="muted">힌트를 다 보고도 못 푼 학생, 확인 문제를 틀린 학생, 기초 연습에서 연속으로 틀리는 학생, ${STALL_MIN}분 넘게 진행이 없는 학생이 모여요. 학생이 해결하면 자동으로 사라지고, 직접 도와준 뒤에는 [✓ 도왔어요]로 정리할 수 있어요.</span></div>`;
   h+= rows.length? `<div class="help">${rows.map(({n,f})=>`<div class="hc ${f.some(x=>x.w>=3)?'hot':''}"><div class="nm">${esc(n)} ${on.has(n)?'':'<span class="muted" style="font-size:13px">(끊김)</span>'}</div>
-      <div class="loc">지금: ${esc(R(n).loc||'-')} · ${summaryOf(n)}</div>${f.map(x=>`<span class="chip ${x.c}">${x.t}</span>`).join('')}</div>`).join('')}</div>`
+      <div class="loc">지금: ${esc(R(n).loc||'-')} · ${summaryOf(n)}</div>${f.map(x=>`<span class="chip ${x.c}">${x.t}</span>`).join('')}
+      <div style="margin-top:8px"><button class="ghost sm" onclick="ackHelp('${esc(n).replace(/'/g,"\\'")}')">✓ 도왔어요</button></div></div>`).join('')}</div>`
     : `<div class="card muted" style="text-align:center;padding:30px">지금은 도움이 필요한 학생이 없어요 🙂</div>`;
   const fine=names.filter(n=>!rows.some(x=>x.n===n));
   if(fine.length) h+=`<div class="okline"><b>순조롭게 진행 중</b><br>${fine.map(n=>`<span class="tag">${esc(n)} <span class="muted">· ${esc(R(n).loc||'')} · ${summaryOf(n)}</span></span>`).join('')}</div>`;
@@ -345,7 +402,7 @@ function panelProb(){
       <span class="seg">${[['lock','잠금'],['hint','풀이 막기'],['all','풀이 허용']].map(([m,l])=>`<button class="${md===m?'sel '+m:''}" onclick="setMode('${p.id}','${m}')">${l}</button>`).join('')}</span>
       ${barHTML(c,N)}</div>
       <div class="stat" style="cursor:pointer" onclick="toggleNames('${k}')">처음에 막힘(△×) <b>${stuck.length}</b> → 다시 풀어 해결 <b>${solved.length}</b>${solved.length?` <span class="m">(힌트로 ${byHint} · 풀이 보고 ${bySol})</span>`:''} · 아직 <b style="color:var(--x)">${notYet.length}</b>
-        &nbsp;|&nbsp; 확인 문제 <b>${right}</b>/${ts.sub} 정답${ts.open-ts.sub>0?` <span class="m">(푸는 중 ${ts.open-ts.sub})</span>`:''}
+        ${t.none?'':`&nbsp;|&nbsp; 확인 문제 <b>${right}</b>/${ts.sub} 정답${ts.open-ts.sub>0?` <span class="m">(푸는 중 ${ts.open-ts.sub})</span>`:''}`}
         ${Object.keys(causes).length?` &nbsp;|&nbsp; 막힌 이유: ${Object.entries(causes).map(([cc,v])=>`${CN[cc]} <b>${v}</b>`).join(' · ')}`:''} <span class="m">▾</span></div>
       ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생:</b> ${tags(notYet.map(x=>{const hh=R(x).hint[p.id]; return x+(hh&&hh.lv?` (힌트${hh.lv})`:'');}))}<br><b>확인 문제 틀림:</b> ${tags(names.filter(x=>{const y=R(x).twin[t.id]; return y&&y.a!=null&&y.a!==t.ok;}))}</div>`:''}</div>`; });
   h+=`<div class="grp" style="margin-top:20px"><b>학생별 현황</b> · 기호=채점, H=연 힌트 수, ✔=다시 풀어 해결, ⭕❌=확인 문제</div>`;
@@ -381,7 +438,7 @@ function panelBas(){
   return h;
 }
 function panelPreview(){
-  let h=`<div class="tool"><span class="muted">학생에게 보이는 힌트·풀이·확인 문제예요. 문구는 <b>unit.js</b>에서 고칠 수 있어요.</span><button class="ghost sm" onclick="$('panel').dataset.pv='';render()">기초 연습 예시 새로 만들기</button></div>`;
+  let h=`<div class="tool"><span class="muted">학생에게 보이는 힌트·풀이·확인 문제예요. 문구는 <b>units/${U.id}.js</b>에서 고칠 수 있어요.</span><button class="ghost sm" onclick="$('panel').dataset.pv='';render()">기초 연습 예시 새로 만들기</button></div>`;
   for(const p of P) h+=`<div class="pv"><div class="q"><div><b style="font-size:20px">${p.no}</b> <span class="muted">${G[p.group].name} · 막히면 권할 기초: ${((U.basicFor||{})[p.id]||[]).map(k=>BBY[k].name).join(', ')}</span><div class="ptext" style="margin-top:4px">${p.text}</div>
       <div style="margin-top:6px;color:var(--acc);font-weight:700">정답: ${p.ans}</div><ol>${p.hints.map(x=>`<li>${x}</li>`).join('')}</ol>
       <div style="margin-top:8px;background:var(--o-soft);border-radius:10px;padding:10px"><b>풀이</b><br>${p.sol}<div style="margin-top:6px;font-weight:900">💡 ${p.rule}</div></div></div><div>${p.fig?p.fig():''}</div></div></div>`;
@@ -398,7 +455,7 @@ function renderBig(){
   const names=roster(), N=names.length;
   let h=`<h2>문제별 진행 <span class="muted" style="font-size:18px">초록 = 해결(처음부터 ○ 포함) · 오른쪽 = 확인 문제 정답</span></h2>`;
   h+=P.map(p=>{ const done=names.filter(n=>R(n).diag[p.id]==='o'||R(n).solved[p.id]).length, t=TOF[p.id], st=twinStats(t,names);
-    return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?done/N*100:0}%">${done||''}</div></div><span style="width:190px">확인 ⭕ ${st.by[t.ok].length} / ${st.sub}</span></div>`; }).join('');
+    return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?done/N*100:0}%">${done||''}</div></div><span style="width:190px">${t.none?'':`확인 ⭕ ${st.by[t.ok].length} / ${st.sub}`}</span></div>`; }).join('');
   $('bigBody').innerHTML=h;
 }
 
@@ -419,18 +476,18 @@ function restore(inp){
   const f=inp.files[0]; if(!f) return; const rd=new FileReader();
   rd.onload=()=>{ try{ const o=JSON.parse(rd.result); if(!o||!o.state||typeof o.state.recs!=='object') throw 0;
     if(!confirm('백업 파일로 지금 기록을 바꿀까요? (수업 코드는 그대로)')) return;
-    const code=S.code; S=Object.assign({},DEF,o.state,{code}); save(); pushCfg();
+    const code=S.code, key=S.key; S=Object.assign({},DEF,o.state,{code,key}); save(); pushCfg();
     if(base) for(const n in S.recs){ const {loc,progT,...r}=S.recs[n]; base.child('stu/'+fbKey(n)+'/rec').set(JSON.parse(JSON.stringify(r))); }
     toast('불러왔어요'); }catch(e){ alert('백업 파일을 읽지 못했어요.'); } inp.value=''; };
   rd.readAsText(f);
 }
 function resetAll(){
   if(!confirm('학생 기록과 설정(기다리는 시간·문제별 잠금)을 모두 지울까요?\n먼저 [💾 백업]이나 [⬇ CSV]로 저장해 두는 것을 권해요.')) return;
-  const code=S.code; S=Object.assign({},DEF,{code,recs:{},mode:{},resetAt:now()}); save();
+  const code=S.code, key=S.key; S=Object.assign({},DEF,{code,key,recs:{},mode:{},resetAt:now()}); save();
   if(base) base.child('stu').remove();
   pushCfg(); toast('초기화했어요');
 }
-function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 학생은 새 코드로 다시 들어와야 해요. (지금 기록은 이 컴퓨터에 남아 있어요)')) return; S.code=newCode(); save(); showCode(); openClass(); render(); }
+function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 학생은 새 코드로 다시 들어와야 해요. (지금 기록은 이 컴퓨터에 남아 있어요)')) return; S.code=newCode(); S.key=null; save(); showCode(); openClass(); render(); }
 
 setInterval(render,15000);   // '몇 분째 진행 없음' 갱신
 showCode(); render(); startFB();
