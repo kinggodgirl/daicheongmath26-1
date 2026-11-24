@@ -36,3 +36,12 @@ input,select{font:inherit;padding:10px 12px;border:2px solid var(--line);border-
 .overlay .box{background:#fff;border-radius:20px;padding:26px;max-width:520px;width:100%;text-align:center}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-weight:700;transition:transform .25s;z-index:60;max-width:90%}
 .toast.on{transform:translateX(-50%) translateY(0)}
+
+/* 그림 스타일: 기본은 수능 시험지처럼 가는 선 · 작은 점 · 연한 색칠.
+   body.fig-bold(교사가 '굵은 선(프로젝터용)'을 고르면)이면 단원 파일에 적힌 굵은 선 그대로 */
+body:not(.fig-bold) .fig [stroke-width="2.6"],body:not(.fig-bold) .fig [stroke-width="2.2"]{stroke-width:1.4}
+body:not(.fig-bold) .fig [stroke-width="1.8"],body:not(.fig-bold) .fig [stroke-width="1.6"],body:not(.fig-bold) .fig [stroke-width="1.4"],body:not(.fig-bold) .fig [stroke-width="1.2"]{stroke-width:.9}
+body:not(.fig-bold) .fig [stroke-dasharray="0.1 5"]{stroke-dasharray:3 3;stroke-width:.9;stroke-linecap:butt}
+body:not(.fig-bold) .fig circle[r="5"],body:not(.fig-bold) .fig circle[r="4"]{r:2.6}
+body:not(.fig-bold) .fig [fill="#d4d4d4"]{fill:#e6e6e6}
+body:not(.fig-bold) .fig text{font-size:21px}
