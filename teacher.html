@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="common.css">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="unit.js"></script>
 <style>
@@ -140,7 +141,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261123.4;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.1;            // index.html 과 같은 값이어야 함
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
@@ -181,12 +182,37 @@ function pushCfg(){ save(); writeCfg(); render(); }
 function studentURL(){ return location.href.replace(/[?#].*$/,'').replace(/teacher\.html$/,'')+'?c='+S.code; }
 function showCode(){ $('code').textContent=S.code; $('url').textContent=studentURL(); $('demoLink').href=studentURL().replace(/\?c=\d+$/,'?demo=1'); }
 function copyURL(){ const u=studentURL(); (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('학생 주소를 복사했어요')).catch(()=>{ prompt('학생 주소',u); }); }
-function openClass(){
+function openClass(tries=0){
   if(!FB_OK||!db){ $('badge').textContent='연결 설정 필요'; $('peerErr').textContent='firebase-config.js에 Firebase 설정값이 아직 없어요.'; return; }
   if(base){ try{ base.child('stu').off(); }catch(e){} }
-  base=db.ref('classes/'+S.code); LIVE={};
-  writeCfg();
-  base.child('stu').on('value',snap=>{ ingest(snap.val()||{}); render(); }, e=>{ $('peerErr').textContent='읽기 실패: '+e.message+' (데이터베이스 규칙을 확인하세요)'; });
+  base=null; LIVE={};
+  const code=S.code, ref=db.ref('classes/'+code);
+  authReady().then(uid=>ref.child('owner').set(uid).then(()=>{
+    if(S.code!==code) return;
+    base=ref; writeCfg();
+    base.child('stu').on('value',snap=>{ ingest(snap.val()||{}); render(); }, e=>{ $('peerErr').textContent='읽기 실패: '+e.message+' (데이터베이스 규칙을 확인하세요)'; });
+  }, e=>{
+    if(S.code!==code) return;
+    /* 이 코드는 다른 교사 화면(또는 다른 브라우저)이 이미 쓰고 있음 → 새 코드로 */
+    if(isDenied(e) && tries<5){ S.code=newCode(); save(); showCode(); toast(`수업 코드 ${code}는 다른 화면에서 쓰고 있어서 새 코드 ${S.code}를 만들었어요`,5000); openClass(tries+1); return; }
+    throw e;
+  })).catch(e=>{ $('peerErr').textContent=authMsg(e); });
+}
+/* 익명 로그인: 이 브라우저에 보이지 않는 번호(uid)가 생기고, 이 번호가 수업 코드의 주인이 됨 */
+let authP=null;
+function authReady(){
+  if(!authP) authP=new Promise((res,rej)=>{
+    const un=firebase.auth().onAuthStateChanged(u=>{ un();
+      if(u) res(u.uid); else firebase.auth().signInAnonymously().then(c=>res(c.user.uid)).catch(e=>{ authP=null; rej(e); }); });
+  });
+  return authP;
+}
+function isDenied(e){ return /permission|denied/i.test(String((e&&(e.code||''))+' '+(e&&e.message||''))); }
+function authMsg(e){
+  const c=String(e&&e.code||'');
+  if(/admin-restricted|operation-not-allowed/.test(c)) return '익명 로그인이 꺼져 있어요. Firebase 콘솔 → Authentication → 로그인 방법에서 [익명]을 사용 설정하세요.';
+  if(isDenied(e)) return '데이터베이스가 접근을 막았어요: '+e.message+' (데이터베이스 규칙을 확인하세요)';
+  return '연결 오류: '+(e&&e.message||e);
 }
 function startFB(){
   if(!FB_OK||!db){ openClass(); return; }
@@ -226,6 +252,8 @@ function setMode(pid,m){ S.mode[pid]=m; pushCfg(); }
 function setAllMode(m){ for(const p of P) S.mode[p.id]=m; pushCfg(); }
 function setWait(v){ S.wait=+v; pushCfg(); }
 function toggleNames(k){ OPEN[k]=!OPEN[k]; render(); }
+function unlockName(n){ if(!confirm(`'${n}' 학생이 다른 기기로 들어올 수 있게 할까요?\n(기록은 그대로 이어져요. 지금 쓰던 기기에서는 더 이상 저장되지 않아요)`)) return;
+  if(!base) return; base.child('stu/'+fbKey(n)+'/uid').remove().then(()=>toast(`'${n}' 학생이 새 기기에서 같은 이름으로 들어오면 돼요`,4000)).catch(e=>toast('실패: '+e.message)); }
 function removeName(n){ if(!confirm(`'${n}' 학생의 기록을 지울까요?`)) return; delete S.recs[n]; save(); if(base) base.child('stu/'+fbKey(n)).remove(); render(); }
 
 /* ---------- 분석 ---------- */
@@ -264,7 +292,7 @@ function renderStudents(){
   const on=onlineNames(), names=roster();
   const vers=Object.values(LIVE).filter(x=>x.online&&x.ver&&x.ver!==APP_VER).length;
   $('stuCnt').textContent=`접속 ${on.size}명`+(vers?` · ⚠ 버전 다른 화면 ${vers}`:'');
-  $('stuList').innerHTML= names.length? names.map(n=>`<li class="${on.has(n)?'':'off'}"><span class="dot ${on.has(n)?'on':''}"></span><span class="nm">${esc(n)}</span><span class="pr">${on.has(n)?esc(R(n).loc||''):'끊김'}</span>${on.has(n)?'':`<button class="rm" title="기록 지우기" onclick="removeName('${esc(n).replace(/'/g,"\\'")}')">✕</button>`}</li>`).join('')
+  $('stuList').innerHTML= names.length? names.map(n=>`<li class="${on.has(n)?'':'off'}"><span class="dot ${on.has(n)?'on':''}"></span><span class="nm">${esc(n)}</span><span class="pr">${on.has(n)?esc(R(n).loc||''):'끊김'}</span><button class="rm" title="기기 바꾸기 (다른 기기로 들어올 수 있게)" onclick="unlockName('${esc(n).replace(/'/g,"\\'")}')">🔓</button>${on.has(n)?'':`<button class="rm" title="기록 지우기" onclick="removeName('${esc(n).replace(/'/g,"\\'")}')">✕</button>`}</li>`).join('')
     : '<li class="muted">아직 들어온 학생이 없어요. 학생 주소나 수업 코드를 알려 주세요.</li>';
 }
 function summaryOf(n){ const r=R(n); const solved=P.filter(p=>r.diag[p.id]==='o'||r.solved[p.id]).length; const tw=TW.filter(t=>r.twin[t.id]&&r.twin[t.id].a!=null); const ok=tw.filter(t=>r.twin[t.id].a===t.ok).length; const st=BT.filter(b=>r.bas[b.k]&&r.bas[b.k].star).length;
