@@ -167,7 +167,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.6;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.7;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -175,6 +175,7 @@ const $=id=>document.getElementById(id);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 function toast(m,ms=2600){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),ms);}
 const DEMO=(()=>{try{return new URLSearchParams(location.search).has('demo');}catch(e){return false;}})();
+const MIRROR=DEMO&&(()=>{try{return new URLSearchParams(location.search).has('mirror')&&window.parent!==window;}catch(e){return false;}})();   // 교사 화면 안의 '학생 화면'
 const MK={o:'○',t:'△',x:'×'}, MKW={o:'맞았어요',t:'막혔어요',x:'틀렸어요'}, NUM='①②③④';
 if(!BT.length) $('navBas').classList.add('hide');   // 기초 연습이 없는 단원
 $('hTitle').textContent=U.title; $('hSub').textContent=U.sub; $('mTitle').textContent=U.title; document.title=U.title;
@@ -190,7 +191,7 @@ function normName(s){ s=String(s||'').replace(/\s+/g,''); const m=s.match(/^0*(\
 function nameOk(s){ return /^\d{1,2} [^\d\s][^\s]{0,9}$/.test(s); }
 function myName(){ return normName($('myName').value)||'이름 없음'; }
 function recKey(){ return 'ur-s-'+U.id+'-'+(DEMO?'demo':(CL.code||''))+'-'+myName(); }
-function saveRec(){ LS.set(recKey(),REC); }
+function saveRec(){ if(MIRROR) return; LS.set(recKey(),REC); }
 function loadRec(){ const r=LS.get(recKey(),null); REC=Object.assign(emptyRec(), r||{}); }
 function modeOf(pid){ return CFG.mode[pid]||'all'; }   // lock: 힌트 잠금 · hint: 풀이 막기 · all: 힌트 다 보면 풀이도 열림
 
@@ -599,12 +600,28 @@ function authMsg(e){
   if(isDenied(e)) return '데이터베이스가 접근을 막았어요. 선생님께 알려 주세요. ('+e.message+')';
   return '연결 오류: '+(e&&e.message||e);
 }
+/* 교사 화면이 보내 준 학생 기록으로 같은 화면을 보여 줌 (저장·전송 안 함) */
+function startMirror(){
+  addEventListener('message',e=>{
+    if(e.origin!==location.origin||!e.data||e.data.type!=='mirror') return;
+    const d=e.data; REC=Object.assign(emptyRec(), d.rec||{}); CFG={wait:Math.max(0,+(d.cfg&&d.cfg.wait)||0), mode:(d.cfg&&d.cfg.mode)||{}};
+    $('who').textContent='👤 '+d.name;
+    if(d.loc!=null){   // 학생이 지금 있는 곳으로
+      const p=P.find(x=>d.loc.startsWith(x.no)), b=(d.loc.match(/^기초 (\S+)$/)||[])[1];
+      if(p){ if(UI.view!=='prob'||UI.pid!==p.id) return go('prob',p.id); }
+      else if(b&&BBY[b]){ if(UI.view!=='bt'||UI.bt!==b) return go('bt',b); }
+      else if(/^기초 연습/.test(d.loc)){ if(UI.view!=='bas') return go('bas'); }
+      else if(/^문제 목록/.test(d.loc)){ if(UI.view!=='list') return go('list'); }
+    }
+    if(UI.view!=='bt') render();
+  });
+}
 function kicked(){ const nm=myName(); goHome(); setState(`'${nm}' 이름이 다른 기기로 넘어갔거나 선생님이 기록을 정리했어요. 번호와 이름을 확인하고 다시 들어오세요.`); }
 
 /* ---------- 시작 ---------- */
 (function init(){
   const n=normName(LS.get('ur-name','')); if(n) $('myName').value=n;
-  if(DEMO){ $('myName').value='시연'; loadRec(); $('connTxt').textContent='시연 (연결 없음)'; showMain(); return; }
+  if(DEMO){ $('myName').value='시연'; loadRec(); $('connTxt').textContent=MIRROR?'👀 선생님 화면에서 보는 중':'시연 (연결 없음)'; showMain(); if(MIRROR) startMirror(); return; }
   let code=null; try{ const q=new URLSearchParams(location.search).get('c'); if(q&&/^\d{4}$/.test(q)) code=q; }catch(e){}
   if(!code) code=LS.get('ur-class',null);
   if(!FB_OK) setState('⚠ 연결 설정(firebase-config.js)이 아직 없어요.');
