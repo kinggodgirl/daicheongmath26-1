@@ -157,7 +157,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.4;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.5;            // index.html 과 같은 값이어야 함
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 for(const p of P) if(!TOF[p.id]) TOF[p.id]={id:'none-'+p.id, of:p.id, ch:['-'], ok:0, why:[''], none:true};   // 확인 문제가 없는 문제
@@ -168,7 +168,7 @@ function toast(m,ms=2400){const t=$('toast');t.textContent=m;t.classList.add('on
 const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.map(c=>[c.k,c.short])), NUM='①②③④';
 const STALL_MIN=5;   // 이 시간(분) 동안 진행이 없으면 '도울 학생'에 표시
 const SKEY='ur-t2-'+U.id;
-const DEF={code:null, wait:60, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0};
+const DEF={code:null, wait:60, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0, ack:{}};
 let S=Object.assign({},DEF,LS.get(SKEY,{}));
 function save(){ LS.set(SKEY,S); }
 function newCode(){ return String(Math.floor(1000+Math.random()*9000)); }
@@ -334,12 +334,15 @@ function removeName(n){ if(!confirm(`'${n}' 학생의 기록을 지울까요?`))
 function flagsOf(n){
   const r=R(n), f=[];
   for(const p of P){ const d=r.diag[p.id], h=r.hint[p.id]||{}, sv=r.solved[p.id];
-    if((d==='t'||d==='x') && !sv && (h.lv||0)>=p.hints.length) f.push({c:'r', t:`${p.no} 힌트 다 보고도 못 품${h.sol?' (풀이 봄)':''}`, w:3}); }
-  for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok) f.push({c:'y', t:`확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${t.why[x.a]||''}`, w:2}); }
-  for(const b of BT){ const x=r.bas[b.k]; if(x&&x.recent&&x.recent.length>=3&&x.recent.slice(-3).every(v=>!v)) f.push({c:'p', t:`기초 ${b.name}: 3번 연속 틀림`, w:3}); }
-  if(onlineNames().has(n) && r.progT && now()-r.progT>STALL_MIN*60000) f.push({c:'g', t:`${Math.floor((now()-r.progT)/60000)}분째 진행 없음`, w:1});
-  return f;
+    if((d==='t'||d==='x') && !sv && (h.lv||0)>=p.hints.length) f.push({c:'r', k:p.id+(h.sol?'s':''), t:`${p.no} 힌트 다 보고도 못 품${h.sol?' (풀이 봄)':''}`, w:3}); }
+  for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok) f.push({c:'y', k:t.id, t:`확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${t.why[x.a]||''}`, w:2}); }
+  for(const b of BT){ const x=r.bas[b.k]; if(x&&x.recent&&x.recent.length>=3&&x.recent.slice(-3).every(v=>!v)) f.push({c:'p', k:b.k+'-'+x.n, t:`기초 ${b.name}: 3번 연속 틀림`, w:3}); }
+  if(onlineNames().has(n) && r.progT && now()-r.progT>STALL_MIN*60000) f.push({c:'g', k:'stall-'+r.progT, t:`${Math.floor((now()-r.progT)/60000)}분째 진행 없음`, w:1});
+  const ack=(S.ack||{})[n]||[];
+  return f.filter(x=>!ack.includes(x.k));
 }
+/* '도왔어요': 지금 보이는 알림만 숨김. 새로 막히면 다시 나타남 */
+function ackHelp(n){ const f=flagsOf(n); S.ack=Object.assign({},S.ack); S.ack[n]=((S.ack[n])||[]).concat(f.map(x=>x.k)).slice(-50); save(); render(); toast(`'${n}' 학생 알림을 정리했어요. 새로 막히면 다시 나타나요`); }
 function diagCounts(p,names){ const c={o:[],t:[],x:[],n:[]}; for(const n of names){ const m=R(n).diag[p.id]; (c[m]||c.n).push(n); } return c; }
 function barHTML(c,total){ const w=k=>total?c[k].length/total*100:0; return `<div class="bar">${['o','t','x','n'].map(k=>c[k].length?`<div class="seg-${k}" style="width:${w(k)}%">${k==='n'?'':MK[k]+' '}${c[k].length}</div>`:'').join('')}</div>`; }
 function tags(arr){ return arr.length? arr.map(n=>`<span class="tag">${esc(n)}</span>`).join('') : '<span class="muted">없음</span>'; }
@@ -374,9 +377,10 @@ function summaryOf(n){ const r=R(n); const solved=P.filter(p=>r.diag[p.id]==='o'
 function panelHelp(){
   const names=roster(), on=onlineNames();
   const rows=names.map(n=>({n,f:flagsOf(n)})).filter(x=>x.f.length).sort((a,b)=>b.f.reduce((s,x)=>s+x.w,0)-a.f.reduce((s,x)=>s+x.w,0));
-  let h=`<div class="tool"><span class="muted">힌트를 다 보고도 못 푼 학생, 확인 문제를 틀린 학생, 기초 연습에서 연속으로 틀리는 학생, ${STALL_MIN}분 넘게 진행이 없는 학생이 모여요. 학생이 해결하면 자동으로 사라져요.</span></div>`;
+  let h=`<div class="tool"><span class="muted">힌트를 다 보고도 못 푼 학생, 확인 문제를 틀린 학생, 기초 연습에서 연속으로 틀리는 학생, ${STALL_MIN}분 넘게 진행이 없는 학생이 모여요. 학생이 해결하면 자동으로 사라지고, 직접 도와준 뒤에는 [✓ 도왔어요]로 정리할 수 있어요.</span></div>`;
   h+= rows.length? `<div class="help">${rows.map(({n,f})=>`<div class="hc ${f.some(x=>x.w>=3)?'hot':''}"><div class="nm">${esc(n)} ${on.has(n)?'':'<span class="muted" style="font-size:13px">(끊김)</span>'}</div>
-      <div class="loc">지금: ${esc(R(n).loc||'-')} · ${summaryOf(n)}</div>${f.map(x=>`<span class="chip ${x.c}">${x.t}</span>`).join('')}</div>`).join('')}</div>`
+      <div class="loc">지금: ${esc(R(n).loc||'-')} · ${summaryOf(n)}</div>${f.map(x=>`<span class="chip ${x.c}">${x.t}</span>`).join('')}
+      <div style="margin-top:8px"><button class="ghost sm" onclick="ackHelp('${esc(n).replace(/'/g,"\\'")}')">✓ 도왔어요</button></div></div>`).join('')}</div>`
     : `<div class="card muted" style="text-align:center;padding:30px">지금은 도움이 필요한 학생이 없어요 🙂</div>`;
   const fine=names.filter(n=>!rows.some(x=>x.n===n));
   if(fine.length) h+=`<div class="okline"><b>순조롭게 진행 중</b><br>${fine.map(n=>`<span class="tag">${esc(n)} <span class="muted">· ${esc(R(n).loc||'')} · ${summaryOf(n)}</span></span>`).join('')}</div>`;
