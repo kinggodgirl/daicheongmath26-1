@@ -147,6 +147,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
         <button data-v="prob" onclick="setView('prob')">문제별 현황</button>
         <button data-v="twin" onclick="setView('twin')">확인 문제</button>
         <button data-v="bas" onclick="setView('bas')">🧱 기초 연습</button>
+        <button data-v="mirror" onclick="setView('mirror')">👀 학생 화면</button>
         <button data-v="preview" onclick="setView('preview')">힌트·풀이 미리보기</button>
       </div>
       <div id="panel"></div>
@@ -157,7 +158,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.6;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.7;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -362,8 +363,11 @@ function renderNow(){
   $('pauseBtn').textContent=S.paused?'▶ 멈춤 풀기':'✋ 멈추기'; $('pauseBtn').style.background=S.paused?'var(--x)':'';
   renderStudents();
   const v=S.view;
-  if(v!=='preview' || !$('panel').dataset.pv){ $('panel').innerHTML= v==='prob'?panelProb() : v==='twin'?panelTwin() : v==='bas'?panelBas() : v==='preview'?panelPreview() : panelHelp(); }
-  $('panel').dataset.pv = v==='preview' ? '1' : '';
+  /* 미리보기·학생 화면 탭은 한 번만 그리고 유지 (학생 화면 iframe이 새로 열리지 않게) */
+  const keep = (v==='preview'||v==='mirror') && $('panel').dataset.pv===v;
+  if(!keep){ $('panel').innerHTML= v==='prob'?panelProb() : v==='twin'?panelTwin() : v==='bas'?panelBas() : v==='preview'?panelPreview() : v==='mirror'?panelMirror() : panelHelp(); }
+  $('panel').dataset.pv = (v==='preview'||v==='mirror') ? v : '';
+  if(v==='mirror') updateMirror();
   if($('big').classList.contains('on')) renderBig();
 }
 function renderStudents(){
@@ -449,6 +453,27 @@ function panelPreview(){
   for(const b of BT){ const q=U.basicGen[b.k](); h+=`<div class="pv"><div class="q"><div><b>${b.name}</b><div class="ptext">${q.text}</div><div style="margin-top:6px">${q.kind==='mc'?q.choices.map((c,i)=>i===q.ok?`<b>✔ ${c}</b>`:c).join(' · '):`정답: ${q.ans} ${q.suffix}`}</div>
       ${q.steps.length?`<ol>${q.steps.map(s=>`<li>${s.q}</li>`).join('')}</ol>`:''}</div><div>${q.fig||''}</div></div></div>`; }
   return h;
+}
+/* ---------- 👀 학생 화면: 학생 앱을 그대로 띄우고, 고른 학생의 기록·위치를 보내 줌 ---------- */
+let MIR={sent:'', pick:''};
+function panelMirror(){
+  MIR.sent='';
+  const src=studentURL().replace(/\?c=\d+$/,'')+'?demo=1&mirror=1&u='+encodeURIComponent(U.id);
+  return `<div class="tool"><span class="info">볼 학생</span><select id="mirPick" onchange="MIR.pick=this.value;MIR.sent='';updateMirror()"></select>
+      <label style="display:flex;gap:4px;align-items:center;font-size:14px"><input type="checkbox" id="mirFollow" checked onchange="MIR.sent='';updateMirror()"> 학생이 보는 문제 따라가기</label>
+      <span class="muted">학생 패드와 같은 화면이에요. 여기서 누르는 것은 학생 기록에 남지 않아요.</span></div>
+    <div style="display:flex;justify-content:center"><iframe id="mirFrame" src="${src}" title="학생 화면" style="width:min(100%,834px);height:78vh;border:10px solid #1d2433;border-radius:22px;background:var(--paper)" onload="MIR.sent='';updateMirror()"></iframe></div>`;
+}
+function updateMirror(){
+  const sel=$('mirPick'), fr=$('mirFrame'); if(!sel||!fr) return;
+  const names=roster(), on=onlineNames();
+  if(MIR.pick && !names.includes(MIR.pick)) MIR.pick='';
+  const opts='<option value="">빈 화면 (처음 들어온 학생)</option>'+names.map(n=>`<option value="${esc(n)}">${on.has(n)?'● ':'○ '}${esc(n)} · ${esc(R(n).loc||'-')}</option>`).join('');
+  if(sel.dataset.o!==opts){ sel.innerHTML=opts; sel.dataset.o=opts; } sel.value=MIR.pick;
+  const n=MIR.pick, r=n?R(n):blank(), {loc,progT,...rec}=r;
+  const msg={type:'mirror', name:n||'시연', rec, cfg:{wait:S.wait, mode:S.mode}, loc:(n&&$('mirFollow').checked)?(loc||''):null};
+  const js=JSON.stringify(msg); if(js===MIR.sent||!fr.contentWindow) return; MIR.sent=js;
+  try{ fr.contentWindow.postMessage(msg, location.origin); }catch(e){}
 }
 function openBig(){ $('big').classList.add('on'); renderBig(); }
 function closeBig(){ $('big').classList.remove('on'); }
