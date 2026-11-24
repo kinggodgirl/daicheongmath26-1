@@ -127,7 +127,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
     <h1 id="hTitle">단원 마무리</h1>
     <div class="sub" id="hSub"></div>
     <label class="small">번호와 이름 (예: 7 김민준)</label>
-    <input id="myName" type="text" maxlength="10" autocomplete="off" placeholder="번호 이름">
+    <input id="myName" type="text" maxlength="16" autocomplete="off" placeholder="번호 이름">
     <label class="small">수업 코드 (선생님 화면의 4자리)</label>
     <input id="classCode" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000">
     <button class="acc" style="width:100%;margin-top:16px;font-size:20px" onclick="joinClick()">수업 들어가기</button>
@@ -156,7 +156,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.1;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.2;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
@@ -172,7 +172,10 @@ if(DEMO) CFG.wait=5;
 function emptyRec(){ return {diag:{}, seen:{}, hint:{}, solved:{}, twin:{}, bas:{}}; }
 let REC=emptyRec();
 let UI={view:'list', pid:null, causeFor:null, showHints:{}, twinPick:{}, bt:null, BS:null};
-function myName(){ return ($('myName').value.trim()||'이름 없음').slice(0,10); }
+/* 이름 정리: 띄어쓰기·'번'·앞자리 0을 통일 → '7 김민준' (같은 학생이 다르게 써서 기록이 나뉘지 않게) */
+function normName(s){ s=String(s||'').replace(/\s+/g,''); const m=s.match(/^0*(\d+)번?[.,·:)\-_]*(.+)$/); if(m) s=(+m[1])+' '+m[2]; return s.slice(0,12); }
+function nameOk(s){ return /^\d{1,2} [^\d\s][^\s]{0,9}$/.test(s); }
+function myName(){ return normName($('myName').value)||'이름 없음'; }
 function recKey(){ return 'ur-s-'+U.id+'-'+(DEMO?'demo':(CL.code||''))+'-'+myName(); }
 function saveRec(){ LS.set(recKey(),REC); }
 function loadRec(){ const r=LS.get(recKey(),null); REC=Object.assign(emptyRec(), r||{}); }
@@ -451,6 +454,7 @@ function mergeRec(a,b){
   for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null) x.a=y.a; if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
   for(const k in (b.bas||{})){ const x=r.bas[k], y=b.bas[k]||{}; if(!x||(y.n||0)>(x.n||0)) r.bas[k]=y; }
   r.resetSeen=Math.max(r.resetSeen||0,b.resetSeen||0);
+  r.mergedAt=Math.max(r.mergedAt||0,+b.mergedAt||0);
   return r;
 }
 function applyCfg(c){
@@ -465,9 +469,12 @@ function applyCfg(c){
 }
 function joinClick(){
   const code=$('classCode').value.replace(/\D/g,'');
-  if(!$('myName').value.trim()){ setState('먼저 번호와 이름을 입력하세요.'); $('myName').focus(); return; }
+  const nm=normName($('myName').value);
+  if(!nm){ setState('먼저 번호와 이름을 입력하세요.'); $('myName').focus(); return; }
+  if(!nameOk(nm)){ setState('번호와 이름을 함께 써 주세요. (예: 7 김민준)'); $('myName').focus(); return; }
+  $('myName').value=nm;
   if(code.length!==4){ setState('수업 코드 4자리를 입력하세요.'); return; }
-  LS.set('ur-name',$('myName').value.trim()); LS.set('ur-class',code);
+  LS.set('ur-name',nm); LS.set('ur-class',code);
   connect(code);
 }
 function showMain(){ $('home').classList.add('hide'); $('main').classList.remove('hide'); $('who').textContent='👤 '+myName(); render(); }
@@ -477,7 +484,7 @@ function setConn(on){
 }
 function disconnect(){
   clearTimeout(CL.upT); clearTimeout(CL.joinT);
-  if(CL.base){ try{ me().child('p').update({online:false}); me().child('p').onDisconnect().cancel(); }catch(e){} try{ CL.base.child('cfg').off(); }catch(e){} }
+  if(CL.base){ try{ me().child('uid').off(); me().child('rec/mergedAt').off(); me().child('p').update({online:false}).catch(()=>{}); me().child('p').onDisconnect().cancel().catch(()=>{}); }catch(e){} try{ CL.base.child('cfg').off(); }catch(e){} }
   try{ db&&db.ref('.info/connected').off(); }catch(e){}
   CL.base=null; CL.code=null; setConn(false);
 }
@@ -488,7 +495,7 @@ function connect(code){
   const base=db.ref('classes/'+code), my=CL.code;
   CL.joinT=setTimeout(()=>{ if(CL.code===my&&!CL.base) setState('⏳ 서버 응답이 늦어요. 와이파이를 확인하세요. 계속 기다리는 중…'); },10000);
   let cfgSnap=null;
-  authReady().then(uid=>base.child('cfg').once('value').then(snap=>{
+  authReady().then(uid=>(CL.uid=uid, base.child('cfg').once('value').then(snap=>{
     if(CL.code!==my) return;
     if(!snap.exists()){ clearTimeout(CL.joinT); CL.code=null; setState(`수업 ${code}을(를) 찾지 못했어요. 선생님 화면이 열려 있는지, 코드가 맞는지 확인하세요.`); return; }
     cfgSnap=snap; CL.key=fbKey(myName()); CL.base=base;
@@ -500,13 +507,18 @@ function connect(code){
         : '연결 오류: '+e.message);
       err.ui=true; throw err;
     }).then(()=>me().child('rec').once('value'));
-  })).then(rs=>{
+  }))).then(rs=>{
     if(CL.code!==my||!cfgSnap||!rs) return;
     clearTimeout(CL.joinT);
     REC=mergeRec(REC, rs.val()); saveRec();
     applyCfg(cfgSnap.val()); upload();
     db.ref('.info/connected').on('value',s=>{ const on=!!s.val(); if(on&&CL.base===base){ const p=me().child('p'); p.onDisconnect().update({online:false}); p.update({online:true,name:myName(),dev:deviceId,ver:APP_VER,loc:lastLoc||'',t:TS}); } setConn(on); });
     base.child('cfg').on('value',s=>applyCfg(s.val()));
+    /* 선생님이 [기기 바꾸기]·[기록 합치기]로 이 이름을 다른 기기로 넘기면 첫 화면으로 */
+    me().child('uid').on('value',s=>{ if(CL.base===base && s.val()!==CL.uid) kicked(); }, ()=>{ if(CL.base===base) kicked(); });
+    /* 선생님이 다른 이름의 기록을 이 이름으로 합치면 받아 옴 */
+    me().child('rec/mergedAt').on('value',s=>{ const v=+s.val()||0; if(CL.base!==base||v<=(REC.mergedAt||0)) return;
+      me().child('rec').once('value').then(rs=>{ REC=mergeRec(REC,rs.val()); REC.mergedAt=v; saveRec(); upload(); if(UI.view!=='bt') render(); toast('선생님이 기록을 합쳐 주었어요'); }).catch(()=>{}); }, ()=>{});
     setState(`✔ 수업 ${code}에 연결됨`,true); showMain(); lastLoc=''; reportLoc();
   }).catch(e=>{ if(CL.code!==my) return; clearTimeout(CL.joinT); CL.code=null; CL.base=null; setState('❌ '+(e.ui?e.message:authMsg(e))); });
 }
@@ -526,18 +538,18 @@ function authMsg(e){
   if(isDenied(e)) return '데이터베이스가 접근을 막았어요. 선생님께 알려 주세요. ('+e.message+')';
   return '연결 오류: '+(e&&e.message||e);
 }
-function onData(){}
+function kicked(){ const nm=myName(); goHome(); setState(`'${nm}' 이름이 다른 기기로 넘어갔거나 선생님이 기록을 정리했어요. 번호와 이름을 확인하고 다시 들어오세요.`); }
 
 /* ---------- 시작 ---------- */
 (function init(){
-  const n=LS.get('ur-name',''); if(n) $('myName').value=n;
+  const n=normName(LS.get('ur-name','')); if(n) $('myName').value=n;
   if(DEMO){ $('myName').value='시연'; loadRec(); $('connTxt').textContent='시연 (연결 없음)'; showMain(); return; }
   let code=null; try{ const q=new URLSearchParams(location.search).get('c'); if(q&&/^\d{4}$/.test(q)) code=q; }catch(e){}
   if(!code) code=LS.get('ur-class',null);
   if(!FB_OK) setState('⚠ 연결 설정(firebase-config.js)이 아직 없어요.');
-  if(code){ $('classCode').value=code; if(n) setTimeout(()=>connect(code),200); else setState('번호와 이름을 입력하고 [수업 들어가기]를 누르세요.'); }
+  if(code){ $('classCode').value=code; if(nameOk(n)) setTimeout(()=>connect(code),200); else setState('번호와 이름을 입력하고 [수업 들어가기]를 누르세요.'); }
 })();
-$('myName').addEventListener('change',()=>{ LS.set('ur-name',$('myName').value.trim()); });
+$('myName').addEventListener('change',()=>{ const v=normName($('myName').value); $('myName').value=v; LS.set('ur-name',v); });
 </script>
 </body>
 </html>
