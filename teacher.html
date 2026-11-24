@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="unit.js"></script>
+<script src="units/list.js"></script>
 <style>
 body{font-size:16px}
 .wrap{max-width:1380px;margin:0 auto;padding:14px 18px 40px}
@@ -103,6 +103,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="wrap">
   <div class="head">
     <h1 id="ttl">교사용</h1>
+    <select id="unitSel" title="단원 바꾸기" onchange="switchUnit(this.value)" style="font-size:15px;padding:6px 8px"></select>
     <div class="codebox"><span class="muted">수업 코드</span><span class="code" id="code">----</span></div>
     <div><div class="url" id="url"></div><button class="ghost sm" onclick="copyURL()" style="margin-top:4px">학생 주소 복사</button></div>
     <span class="sp"></span>
@@ -148,9 +149,10 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.2;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.3;            // index.html 과 같은 값이어야 함
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
+for(const p of P) if(!TOF[p.id]) TOF[p.id]={id:'none-'+p.id, of:p.id, ch:['-'], ok:0, why:[''], none:true};   // 확인 문제가 없는 문제
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
@@ -182,12 +184,17 @@ const FB_OK=!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CON
 let db=null, base=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
 const fbKey=n=>encodeURIComponent(n).replace(/\./g,'%2E');
 const fbName=k=>{ try{ return decodeURIComponent(k); }catch(e){ return k; } };
-function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
+function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, unit:U.id, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
 function pushCfg(){ save(); writeCfg(); render(); }
 
 /* ---------- 연결 ---------- */
 function studentURL(){ return location.href.replace(/[?#].*$/,'').replace(/teacher\.html$/,'')+'?c='+S.code; }
-function showCode(){ $('code').textContent=S.code; $('url').textContent=studentURL(); $('demoLink').href=studentURL().replace(/\?c=\d+$/,'?demo=1'); }
+function showCode(){ $('code').textContent=S.code; $('url').textContent=studentURL(); $('demoLink').href=studentURL().replace(/\?c=\d+$/,'?demo=1&u='+encodeURIComponent(U.id)); }
+/* 단원 바꾸기: 단원마다 수업 코드·기록·설정이 따로 저장돼요 */
+function switchUnit(id){ if(id===U.id) return; location.href=location.pathname+'?u='+encodeURIComponent(id); }
+$('unitSel').innerHTML=UNITS.map(u=>`<option value="${esc(u.id)}" ${u.id===U.id?'selected':''}>${esc(u.title)}</option>`).join('');
+if(UNITS.length<2) $('unitSel').classList.add('hide');
+if(!BT.length) document.querySelector('#tabs button[data-v=bas]').classList.add('hide');
 function copyURL(){ const u=studentURL(); (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('학생 주소를 복사했어요')).catch(()=>{ prompt('학생 주소',u); }); }
 function openClass(tries=0){
   if(!FB_OK||!db){ $('badge').textContent='연결 설정 필요'; $('peerErr').textContent='firebase-config.js에 Firebase 설정값이 아직 없어요.'; return; }
@@ -345,7 +352,7 @@ function panelProb(){
       <span class="seg">${[['lock','잠금'],['hint','풀이 막기'],['all','풀이 허용']].map(([m,l])=>`<button class="${md===m?'sel '+m:''}" onclick="setMode('${p.id}','${m}')">${l}</button>`).join('')}</span>
       ${barHTML(c,N)}</div>
       <div class="stat" style="cursor:pointer" onclick="toggleNames('${k}')">처음에 막힘(△×) <b>${stuck.length}</b> → 다시 풀어 해결 <b>${solved.length}</b>${solved.length?` <span class="m">(힌트로 ${byHint} · 풀이 보고 ${bySol})</span>`:''} · 아직 <b style="color:var(--x)">${notYet.length}</b>
-        &nbsp;|&nbsp; 확인 문제 <b>${right}</b>/${ts.sub} 정답${ts.open-ts.sub>0?` <span class="m">(푸는 중 ${ts.open-ts.sub})</span>`:''}
+        ${t.none?'':`&nbsp;|&nbsp; 확인 문제 <b>${right}</b>/${ts.sub} 정답${ts.open-ts.sub>0?` <span class="m">(푸는 중 ${ts.open-ts.sub})</span>`:''}`}
         ${Object.keys(causes).length?` &nbsp;|&nbsp; 막힌 이유: ${Object.entries(causes).map(([cc,v])=>`${CN[cc]} <b>${v}</b>`).join(' · ')}`:''} <span class="m">▾</span></div>
       ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생:</b> ${tags(notYet.map(x=>{const hh=R(x).hint[p.id]; return x+(hh&&hh.lv?` (힌트${hh.lv})`:'');}))}<br><b>확인 문제 틀림:</b> ${tags(names.filter(x=>{const y=R(x).twin[t.id]; return y&&y.a!=null&&y.a!==t.ok;}))}</div>`:''}</div>`; });
   h+=`<div class="grp" style="margin-top:20px"><b>학생별 현황</b> · 기호=채점, H=연 힌트 수, ✔=다시 풀어 해결, ⭕❌=확인 문제</div>`;
@@ -381,7 +388,7 @@ function panelBas(){
   return h;
 }
 function panelPreview(){
-  let h=`<div class="tool"><span class="muted">학생에게 보이는 힌트·풀이·확인 문제예요. 문구는 <b>unit.js</b>에서 고칠 수 있어요.</span><button class="ghost sm" onclick="$('panel').dataset.pv='';render()">기초 연습 예시 새로 만들기</button></div>`;
+  let h=`<div class="tool"><span class="muted">학생에게 보이는 힌트·풀이·확인 문제예요. 문구는 <b>units/${U.id}.js</b>에서 고칠 수 있어요.</span><button class="ghost sm" onclick="$('panel').dataset.pv='';render()">기초 연습 예시 새로 만들기</button></div>`;
   for(const p of P) h+=`<div class="pv"><div class="q"><div><b style="font-size:20px">${p.no}</b> <span class="muted">${G[p.group].name} · 막히면 권할 기초: ${((U.basicFor||{})[p.id]||[]).map(k=>BBY[k].name).join(', ')}</span><div class="ptext" style="margin-top:4px">${p.text}</div>
       <div style="margin-top:6px;color:var(--acc);font-weight:700">정답: ${p.ans}</div><ol>${p.hints.map(x=>`<li>${x}</li>`).join('')}</ol>
       <div style="margin-top:8px;background:var(--o-soft);border-radius:10px;padding:10px"><b>풀이</b><br>${p.sol}<div style="margin-top:6px;font-weight:900">💡 ${p.rule}</div></div></div><div>${p.fig?p.fig():''}</div></div></div>`;
@@ -398,7 +405,7 @@ function renderBig(){
   const names=roster(), N=names.length;
   let h=`<h2>문제별 진행 <span class="muted" style="font-size:18px">초록 = 해결(처음부터 ○ 포함) · 오른쪽 = 확인 문제 정답</span></h2>`;
   h+=P.map(p=>{ const done=names.filter(n=>R(n).diag[p.id]==='o'||R(n).solved[p.id]).length, t=TOF[p.id], st=twinStats(t,names);
-    return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?done/N*100:0}%">${done||''}</div></div><span style="width:190px">확인 ⭕ ${st.by[t.ok].length} / ${st.sub}</span></div>`; }).join('');
+    return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?done/N*100:0}%">${done||''}</div></div><span style="width:190px">${t.none?'':`확인 ⭕ ${st.by[t.ok].length} / ${st.sub}`}</span></div>`; }).join('');
   $('bigBody').innerHTML=h;
 }
 

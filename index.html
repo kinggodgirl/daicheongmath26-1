@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="unit.js"></script>
+<script src="units/list.js"></script>
 <style>
 .wrap{max-width:1100px;margin:0 auto;padding:14px 16px 60px}
 /* 첫 화면 */
@@ -156,7 +156,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.2;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.3;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
@@ -164,6 +164,7 @@ const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.par
 function toast(m,ms=2600){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),ms);}
 const DEMO=(()=>{try{return new URLSearchParams(location.search).has('demo');}catch(e){return false;}})();
 const MK={o:'○',t:'△',x:'×'}, MKW={o:'맞았어요',t:'막혔어요',x:'틀렸어요'}, NUM='①②③④';
+if(!BT.length) $('navBas').classList.add('hide');   // 기초 연습이 없는 단원
 $('hTitle').textContent=U.title; $('hSub').textContent=U.sub; $('mTitle').textContent=U.title; document.title=U.title;
 
 /* ---------- 상태 ---------- */
@@ -230,14 +231,15 @@ function statusText(p){
   if(s.twinDone) return s.twinOk? ['✔ 확인 문제 ⭕','done'] : ['확인 문제 ❌ · 다시 보기','miss'];
   if(s.twinPending) return ['확인 문제 푸는 중',''];
   if(!s.d) return ['채점 전',''];
-  if(s.d==='o' || s.sv) return [(s.sv?'✔ 해결':'○ 맞음')+' · 확인 문제 남음',''];
+  if(s.d==='o' || s.sv) return s.tw? [(s.sv?'✔ 해결':'○ 맞음')+' · 확인 문제 남음',''] : [(s.sv?'✔ 해결':'✔ 맞음'),'done'];
   return [`${MK[s.d]} · ${s.lv?`힌트 ${s.lv}/${s.n}`:'다시 풀기'}`,''];
 }
 function viewList(){
   let h=`<div class="phase-h">문제 목록</div><div class="phase-d">풀고 싶은 문제를 골라요. 문제마다 <b>① 채점 → ② 다시 풀기 → ③ 확인 문제</b> 순서로 진행해요.</div><div class="plist">`;
   for(const p of P){ const [t,c]=statusText(p);
     h+=`<button class="pcard ${c}" onclick="go('prob','${p.id}')"><span class="no">${p.no}</span><span><div class="tt">${p.title}</div><div class="st">${t}</div></span></button>`; }
-  h+=`</div><div class="bascall"><span style="font-size:34px">🧱</span><span style="flex:1"><b>도저히 못 풀겠다면?</b><br><span class="muted">기초 유형부터 차근차근 연습해요. 언제든 문제 목록으로 돌아올 수 있어요.</span></span><button onclick="go('bas')">기초 연습 하러 가기</button></div>`;
+  h+=`</div>`; if(!BT.length) return h;
+  h+=`<div class="bascall"><span style="font-size:34px">🧱</span><span style="flex:1"><b>도저히 못 풀겠다면?</b><br><span class="muted">기초 유형부터 차근차근 연습해요. 언제든 문제 목록으로 돌아올 수 있어요.</span></span><button onclick="go('bas')">기초 연습 하러 가기</button></div>`;
   return h;
 }
 
@@ -247,7 +249,7 @@ function viewProb(p){
   const s=stOf(p);
   const step= s.twinPending||s.twinDone ? 3 : (!s.d ? 1 : (s.canTwin ? 3 : 2));
   let h=`<div class="phead"><span class="no">${p.no}</span><span class="tt">${p.title}</span><button class="ghost mini" onclick="go('list')">← 목록</button></div>
-    <div class="flow">${['① 채점','② 다시 풀기','③ 확인 문제'].map((x,i)=>`<span class="${i+1===step?'cur':(i+1<step?'ok':'')}">${x}</span>`).join('')}</div>`;
+    <div class="flow">${['① 채점','② 다시 풀기','③ 확인 문제'].slice(0,s.tw?3:2).map((x,i)=>`<span class="${i+1===step?'cur':(i+1<step?'ok':'')}">${x}</span>`).join('')}</div>`;
   if(s.twinPending){
     return h+`<div class="card">${twinBlock(p,s)}<div class="lockmsg" style="margin-top:14px">📕 확인 문제를 내면 이 문제의 힌트·풀이가 다시 열려요.</div></div>`;
   }
@@ -272,7 +274,7 @@ function viewProb(p){
       else h+=`<div class="next"><button style="background:var(--o)" onclick="UI.causeFor='${p.id}';render()">✔ 이제 풀 수 있어요</button></div>`;
       if(s.lv>=s.n) h+=basicSuggest(p,'힌트를 다 봐도 어렵다면, 기초부터 다져 볼까요?');
     } else {
-      h+= s.sv? `<span class="done">✔ 해결했어요</span>${!s.tr.open?` <button class="ghost mini" onclick="unsolve('${p.id}')">취소</button>`:''}` : `<span class="muted">처음부터 맞힌 문제예요. 바로 확인 문제로 가도 돼요.</span>`;
+      h+= s.sv? `<span class="done">✔ 해결했어요</span>${!s.tr.open?` <button class="ghost mini" onclick="unsolve('${p.id}')">취소</button>`:''}` : `<span class="muted">처음부터 맞힌 문제예요.${s.tw?' 바로 확인 문제로 가도 돼요.':''}</span>`;
       h+=`<div style="margin-top:8px"><button class="ghost mini" onclick="UI.showHints['${p.id}']=!UI.showHints['${p.id}'];render()">${UI.showHints[p.id]?'힌트 접기':'힌트·풀이 다시 보기'}</button></div>`;
       if(UI.showHints[p.id]) h+=hintSection(p,s);
     }
@@ -310,6 +312,7 @@ function openSol(pid){ if(modeOf(pid)!=='all'||waitLeft(pid)) return;
 function solve(pid,cause){ REC.solved[pid]={lv:hintLv(pid),cause,sol:!!(REC.hint[pid]&&REC.hint[pid].sol)}; UI.causeFor=null; saveRec(); send({t:'solved',pid,on:true,cause}); render(); toast('좋아요! 이제 확인 문제로 실력을 확인해요'); }
 function unsolve(pid){ delete REC.solved[pid]; saveRec(); send({t:'solved',pid,on:false}); render(); }
 function basicSuggest(p,msg){
+  if(!BT.length) return '';
   const ks=(U.basicFor||{})[p.id]||[];
   return `<div class="suggest"><div class="b">🧱 ${msg}</div>${ks.map(k=>`<button onclick="go('bt','${k}')">${BBY[k].name}</button>`).join('')}<button style="background:#fff;color:#7a4fb5;border:2px solid #b89ad8" onclick="go('bas','${p.id}')">다른 기초 유형</button></div>`;
 }
@@ -498,6 +501,12 @@ function connect(code){
   authReady().then(uid=>(CL.uid=uid, base.child('cfg').once('value').then(snap=>{
     if(CL.code!==my) return;
     if(!snap.exists()){ clearTimeout(CL.joinT); CL.code=null; setState(`수업 ${code}을(를) 찾지 못했어요. 선생님 화면이 열려 있는지, 코드가 맞는지 확인하세요.`); return; }
+    /* 선생님이 고른 단원이 지금 화면과 다르면 그 단원으로 다시 열기 */
+    const cu=(snap.val()||{}).unit;
+    if(cu && cu!==U.id){ clearTimeout(CL.joinT);
+      if(unitExists(cu)){ setState('수업 단원으로 바꾸는 중…'); LS.set('ur-unit',cu); location.replace(location.pathname+'?c='+code+'&u='+encodeURIComponent(cu)); }
+      else { CL.code=null; setState('이 수업의 단원을 찾지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.'); }
+      return; }
     cfgSnap=snap; CL.key=fbKey(myName()); CL.base=base;
     /* 이 이름을 이 기기 것으로 표시 (다른 기기가 먼저 쓰고 있으면 규칙이 막음) */
     return me().child('uid').set(uid).catch(e=>{
