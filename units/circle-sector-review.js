@@ -318,7 +318,10 @@ const BASIC_GEN={
     const pool=['반지름','지름','현','호','부채꼴','활꼴','중심각','반지름','현','호','부채꼴','활꼴','none-sector','none-chord','none-arc'];
     let k; do{ k=rnd(pool); }while(k===A2_LAST); A2_LAST=k;
     const ans=k.startsWith('none')?'어느 것도 아니에요':k;
-    return {text:`원 O에서 <b>굵게 표시한 것</b>의 이름을 고르시오.`, fig:idFig(k), kind:'mc', choices:ID_NAMES.slice(), ok:ID_NAMES.indexOf(ans), steps:[], wide:true, exp:ID_EXP[k]};
+    /* also: 정답은 아니지만 수학적으로 맞는 답 (지름도 현이에요) → 맞음으로 치고 더 정확한 이름을 알려 줌 */
+    const also={};
+    if(k==='지름') also[ID_NAMES.indexOf('현')]='맞아요! 지름도 원 위의 두 점을 이은 선분이니까 <b>현</b>이에요. 그중에서 원의 중심을 지나는 현을 특별히 <b>지름</b>이라고 불러요. 더 정확한 이름은 <b>지름</b>!';
+    return {text:`원 O에서 <b>굵게 표시한 것</b>의 이름을 고르시오.`, fig:idFig(k), kind:'mc', choices:ID_NAMES.slice(), ok:ID_NAMES.indexOf(ans), also, steps:[], wide:true, exp:ID_EXP[k]};
   },
   B(){
     const area=Math.random()<0.35;
