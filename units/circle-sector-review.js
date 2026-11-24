@@ -79,7 +79,7 @@ const FIG = {
 
 /* ---------------- 문제 · 힌트 · 풀이 ----------------
    hints: 학생이 차례로 여는 힌트 (앞의 것을 열고 기다려야 다음이 열림)
-   causes: 이 문제에서 '왜 막혔나요?'에 보일 이유 (cat: concept·idea·calc 중 무엇에 가까운지, 돌아보기에 씀)
+   causes: 이 문제에서 '왜 막혔나요? / 어디서 달라졌나요?'에 보일 이유. h: 이 이유를 고르면 앞의 힌트 h개는 이미 아는 것으로 열어 줌 (cat: concept·idea·calc 중 무엇에 가까운지, 돌아보기에 씀)
            '잘 모르겠어요'는 자동으로 붙음. 없으면 아래 CAUSES를 씀
    checks: 힌트마다 학생이 적을 답 (null이면 답 칸 없음). 맞히면 기다리지 않고 다음 힌트가 열림
            {l:'칸 이름', a:정답 숫자, u:'단위'} — u에 π가 있으면 π 앞의 수만 적으면 됨
@@ -106,7 +106,7 @@ const PROBLEMS = [
    checks:[ [{l:'중심각의 합',a:360,u:'°'}], [{l:'첫째',a:4,u:'개'},{l:'둘째',a:6,u:'개'},{l:'셋째',a:8,u:'개'}], [{l:'첫째 몫',a:80,u:'°'},{l:'둘째 몫',a:120,u:'°'},{l:'셋째 몫',a:160,u:'°'}] ],
    sol:`세 호의 중심각을 모두 더하면 360°예요. 호의 길이는 중심각의 크기에 정비례하므로 중심각의 비도 2 : 3 : 4입니다.<br>${A('CA')}의 중심각 = 360° × ${FR(4,9)} = <b>160°</b>`,
    rule:`호의 길이의 비 = 중심각의 크기의 비`,
-   causes:[{k:'p1-360', label:'중심각을 모두 더하면 360°인 걸 몰랐어요', short:'합 360°', cat:'concept'}, {k:'p1-prop', label:'호의 길이의 비와 중심각의 비가 같다는 걸 몰랐어요', short:'호의 비=각의 비', cat:'concept'}, {k:'p1-split', label:'360°를 2 : 3 : 4로 나누는 방법을 몰랐어요', short:'비례배분', cat:'idea'}, {k:'p1-calc', label:'나누거나 곱하다가 계산을 실수했어요', short:'계산', cat:'calc'}]
+   causes:[{k:'p1-360', label:'중심각을 모두 더하면 360°인 걸 몰랐어요', short:'합 360°', cat:'concept', h:0}, {k:'p1-prop', label:'호의 길이의 비와 중심각의 비가 같다는 걸 몰랐어요', short:'호의 비=각의 비', cat:'concept', h:1}, {k:'p1-split', label:'360°를 2 : 3 : 4로 나누는 방법을 몰랐어요', short:'비례배분', cat:'idea', h:2}, {k:'p1-calc', label:'나누거나 곱하다가 계산을 실수했어요', short:'계산', cat:'calc', h:2}]
  },
  { id:'p2', no:'②', group:'ratio', title:'부채꼴의 호의 길이와 넓이',
    text:`반지름의 길이가 8 cm이고 중심각의 크기가 135°인 부채꼴의 호의 길이와 넓이를 각각 구하시오.`,
@@ -120,7 +120,7 @@ const PROBLEMS = [
    checks:[ null, [{l:'원의 둘레',a:16,u:'π cm'},{l:'원의 넓이',a:64,u:'π cm²'}], [{l:'135°는 360°의',a:3/8,u:'',ph:'예: 1/2'}] ],
    sol:`원의 둘레 = 2${PI} × 8 = 16${PI} (cm), 원의 넓이 = ${PI} × 8² = 64${PI} (cm²)<br>${FR('135','360')} = ${FR(3,8)} 이므로 부채꼴은 원의 ${FR(3,8)} 조각이에요.<br>호의 길이 = 16${PI} × ${FR(3,8)} = <b>6${PI} cm</b>, 넓이 = 64${PI} × ${FR(3,8)} = <b>24${PI} cm²</b>`,
    rule:`부채꼴 = 원의 ${FR('(중심각)','360')} 조각`,
-   causes:[{k:'p2-formula', label:'원의 둘레·넓이 공식이 헷갈렸어요', short:'원 공식', cat:'concept'}, {k:'p2-part', label:'부채꼴이 원의 (중심각/360) 조각인 걸 몰랐어요', short:'몇 분의 몇 조각', cat:'concept'}, {k:'p2-reduce', label:'135/360을 약분하거나 곱하다가 실수했어요', short:'약분·계산', cat:'calc'}, {k:'p2-pi', label:'π나 단위(cm, cm²)를 빼먹었어요', short:'π·단위', cat:'calc'}]
+   causes:[{k:'p2-formula', label:'원의 둘레·넓이 공식이 헷갈렸어요', short:'원 공식', cat:'concept', h:1}, {k:'p2-part', label:'부채꼴이 원의 (중심각/360) 조각인 걸 몰랐어요', short:'몇 분의 몇 조각', cat:'concept', h:2}, {k:'p2-reduce', label:'135/360을 약분하거나 곱하다가 실수했어요', short:'약분·계산', cat:'calc', h:2}, {k:'p2-pi', label:'π나 단위(cm, cm²)를 빼먹었어요', short:'π·단위', cat:'calc', h:2}]
  },
  { id:'p3', no:'③', group:'aux', title:'지름과 현이 만드는 호의 비',
    text:`원 O에서 현 AC와 지름 AB가 이루는 각의 크기가 40°일 때, ${A('AC')}와 ${A('CB')}의 길이의 비를 가장 간단한 자연수의 비로 나타내시오.`,
@@ -135,7 +135,7 @@ const PROBLEMS = [
    checks:[ null, [{l:'∠OCA',a:40,u:'°'}], [{l:'∠AOC',a:100,u:'°'}], [{l:'∠BOC',a:80,u:'°'}] ],
    sol:`${OV('OC')}를 그으면 ${OV('OA')} = ${OV('OC')} (반지름)이므로 삼각형 OAC는 이등변삼각형 → ∠OCA = ∠OAC = 40°<br>∠AOC = 180° − 40° − 40° = 100°, ∠BOC = 180° − 100° = 80°<br>${A('AC')} : ${A('CB')} = 100 : 80 = <b>5 : 4</b>`,
    rule:`중심 O와 원 위의 점이 보이면 반지름부터 긋는다 → 이등변삼각형`,
-   causes:[{k:'p3-aux', label:'반지름 OC를 그을 생각을 못 했어요', short:'보조선 OC', cat:'idea'}, {k:'p3-iso', label:'삼각형 OAC가 이등변삼각형인 걸 몰랐어요', short:'이등변삼각형', cat:'concept'}, {k:'p3-line', label:'∠BOC = 180° − ∠AOC를 못 떠올렸어요', short:'평각 180°', cat:'idea'}, {k:'p3-order', label:'비를 쓸 때 순서를 바꿔 썼어요', short:'비의 순서', cat:'calc'}]
+   causes:[{k:'p3-aux', label:'반지름 OC를 그을 생각을 못 했어요', short:'보조선 OC', cat:'idea', h:0}, {k:'p3-iso', label:'삼각형 OAC가 이등변삼각형인 걸 몰랐어요', short:'이등변삼각형', cat:'concept', h:1}, {k:'p3-line', label:'∠BOC = 180° − ∠AOC를 못 떠올렸어요', short:'평각 180°', cat:'idea', h:3}, {k:'p3-order', label:'비를 쓸 때 순서를 바꿔 썼어요', short:'비의 순서', cat:'calc', h:3}]
  },
  { id:'p4', no:'④', group:'area', title:'정사각형 속 두 사분원',
    text:`오른쪽 그림과 같은 정사각형에서 색칠한 부분의 둘레의 길이와 넓이를 각각 구하시오.`,
@@ -149,7 +149,7 @@ const PROBLEMS = [
    checks:[ [{l:'호',a:2,u:'번'},{l:'선분',a:4,u:'번'}], [{l:'호',a:4,u:'개'},{l:'반지름',a:6,u:'cm'}], null ],
    sol:`<b>둘레</b>: 선분 4개 → 6 × 4 = 24 (cm), 호 2개 → 각각 반지름 6 cm인 원의 ${FR(1,4)} → 2 × (12${PI} × ${FR(1,4)}) = 6${PI} (cm)<br>→ <b>(24 + 6${PI}) cm</b><br><b>넓이</b>: 한 조각 = (정사각형) − (사분원) = 36 − 9${PI}, 두 조각 → <b>(72 − 18${PI}) cm²</b>`,
    rule:`색칠한 부분 = (큰 도형) − (색칠하지 않은 부분)`,
-   causes:[{k:'p4-edge', label:'둘레에 들어가는 선분이나 호를 빠뜨렸어요', short:'둘레 빠뜨림', cat:'idea'}, {k:'p4-arc', label:'사분원의 호의 길이를 구하지 못했어요', short:'사분원 호', cat:'concept'}, {k:'p4-sub', label:'(정사각형) − (사분원)을 떠올리지 못했어요', short:'빼서 구하기', cat:'idea'}, {k:'p4-calc', label:'넓이를 계산하다가 실수했어요', short:'계산', cat:'calc'}]
+   causes:[{k:'p4-edge', label:'둘레에 들어가는 선분이나 호를 빠뜨렸어요', short:'둘레 빠뜨림', cat:'idea', h:0}, {k:'p4-arc', label:'사분원의 호의 길이를 구하지 못했어요', short:'사분원 호', cat:'concept', h:1}, {k:'p4-sub', label:'(정사각형) − (사분원)을 떠올리지 못했어요', short:'빼서 구하기', cat:'idea', h:2}, {k:'p4-calc', label:'넓이를 계산하다가 실수했어요', short:'계산', cat:'calc', h:2}]
  },
  { id:'p5', no:'⑤', group:'aux', title:'평행선과 반원',
    text:`오른쪽 그림과 같은 반원 O에서 ${OV('AC')} ∥ ${OV('OD')}, ∠BOD = 30°, ${A('BD')} = 6 cm일 때, ${A('AC')}의 길이를 구하시오.`,
@@ -164,7 +164,7 @@ const PROBLEMS = [
    checks:[ null, [{l:'∠OAC',a:30,u:'°'}], [{l:'∠OCA',a:30,u:'°'},{l:'∠AOC',a:120,u:'°'}], [{l:'호 AC',a:24,u:'cm'}] ],
    sol:`${OV('OC')}를 긋습니다. ${OV('AC')} ∥ ${OV('OD')}이므로 ∠OAC = ∠BOD = 30° (동위각)<br>${OV('OA')} = ${OV('OC')}이므로 ∠OCA = 30° → ∠AOC = 180° − 60° = 120°<br>30 : 120 = 6 : ${A('AC')} → ${A('AC')} = <b>24 cm</b>`,
    rule:`③과 같은 생각: 반지름 긋기(이등변삼각형) + 평행선의 동위각`,
-   causes:[{k:'p5-aux', label:'반지름 OC를 그을 생각을 못 했어요', short:'보조선 OC', cat:'idea'}, {k:'p5-para', label:'평행선에서 동위각·엇각을 찾지 못했어요', short:'동위각·엇각', cat:'concept'}, {k:'p5-iso', label:'이등변삼각형으로 ∠AOC를 구하지 못했어요', short:'이등변삼각형', cat:'idea'}, {k:'p5-prop', label:'중심각과 호의 길이로 비례식을 잘못 세웠어요', short:'비례식', cat:'calc'}]
+   causes:[{k:'p5-aux', label:'반지름 OC를 그을 생각을 못 했어요', short:'보조선 OC', cat:'idea', h:0}, {k:'p5-para', label:'평행선에서 동위각·엇각을 찾지 못했어요', short:'동위각·엇각', cat:'concept', h:1}, {k:'p5-iso', label:'이등변삼각형으로 ∠AOC를 구하지 못했어요', short:'이등변삼각형', cat:'idea', h:2}, {k:'p5-prop', label:'중심각과 호의 길이로 비례식을 잘못 세웠어요', short:'비례식', cat:'calc', h:3}]
  },
  { id:'p6', no:'⑥', group:'area', title:'이어지는 부채꼴 세 개',
    text:`오른쪽 그림과 같이 한 변의 길이가 3 cm인 정삼각형 ABC의 세 꼭짓점을 중심으로 부채꼴을 그렸을 때, 색칠한 부분의 넓이를 구하려고 한다. 풀이 과정과 답을 쓰시오. (단, ${OV('AC')} = ${OV('AD')}, ${OV('BD')} = ${OV('BE')}, ${OV('CE')} = ${OV('CF')})`,
@@ -179,7 +179,7 @@ const PROBLEMS = [
    checks:[ [{l:'∠DAC',a:120,u:'°'}], [{l:'몇 개',a:3,u:'개'},{l:'넓이',a:3,u:'π cm²'}], [{l:'반지름',a:6,u:'cm'},{l:'∠DBE',a:120,u:'°'}], [{l:'반지름',a:9,u:'cm'},{l:'중심각',a:120,u:'°'},{l:'세 넓이의 합',a:42,u:'π cm²'}] ],
    sol:`세 부채꼴의 중심각은 모두 180° − 60° = 120° → 원의 ${FR(1,3)}<br>반지름: ${OV('AC')} = 3, ${OV('BD')} = 3 + 3 = 6, ${OV('CE')} = 3 + 6 = 9 (cm)<br>넓이 = ${FR(1,3)}(9${PI} + 36${PI} + 81${PI}) = 3${PI} + 12${PI} + 27${PI} = <b>42${PI} cm²</b>`,
    rule:`부채꼴마다 [반지름, 중심각]을 표로 정리하고 더한다`,
-   causes:[{k:'p6-angle', label:'세 부채꼴의 중심각이 120°인 걸 못 찾았어요', short:'중심각 120°', cat:'idea'}, {k:'p6-radius', label:'반지름이 3, 6, 9 cm로 커지는 걸 몰랐어요', short:'반지름 3·6·9', cat:'idea'}, {k:'p6-formula', label:'부채꼴의 넓이 공식이 헷갈렸어요', short:'넓이 공식', cat:'concept'}, {k:'p6-calc', label:'세 넓이를 더하다가 계산을 실수했어요', short:'계산', cat:'calc'}]
+   causes:[{k:'p6-angle', label:'세 부채꼴의 중심각이 120°인 걸 못 찾았어요', short:'중심각 120°', cat:'idea', h:0}, {k:'p6-radius', label:'반지름이 3, 6, 9 cm로 커지는 걸 몰랐어요', short:'반지름 3·6·9', cat:'idea', h:2}, {k:'p6-formula', label:'부채꼴의 넓이 공식이 헷갈렸어요', short:'넓이 공식', cat:'concept', h:1}, {k:'p6-calc', label:'세 넓이를 더하다가 계산을 실수했어요', short:'계산', cat:'calc', h:3}]
  },
  { id:'p7', no:'⑦', group:'area', title:'정삼각형과 세 반원',
    text:`오른쪽 그림은 한 변의 길이가 8 cm인 정삼각형의 각 변을 지름으로 하는 반원을 그린 것이다. 색칠한 부분의 넓이를 구하시오.`,
@@ -193,47 +193,55 @@ const PROBLEMS = [
    checks:[ [{l:'반지름',a:4,u:'cm'}], null, [{l:'반지름',a:4,u:'cm'},{l:'중심각',a:60,u:'°'}] ],
    sol:`반원의 반지름은 4 cm. 한 조각에서 튀어나온 활꼴 하나를 파인 자리로 옮기면, 반지름 4 cm, 중심각 60°인 부채꼴이 돼요.<br>한 조각 = 16${PI} × ${FR(1,6)} = ${FR('8'+PI,3)} (cm²), 세 조각 → <b>8${PI} cm²</b>`,
    rule:`모양이 복잡하면 잘라서 옮겨 구하기 쉬운 모양(부채꼴)으로 만든다`,
-   causes:[{k:'p7-radius', label:'반원의 반지름을 잘못 구했어요', short:'반지름', cat:'calc'}, {k:'p7-move', label:'잘라서 옮길 생각을 못 했어요', short:'잘라 옮기기', cat:'idea'}, {k:'p7-sector', label:'옮긴 모양이 중심각 60°인 부채꼴인 걸 몰랐어요', short:'60° 부채꼴', cat:'concept'}, {k:'p7-calc', label:'한 조각을 3배 하거나 계산하다가 실수했어요', short:'계산', cat:'calc'}],
+   causes:[{k:'p7-radius', label:'반원의 반지름을 잘못 구했어요', short:'반지름', cat:'calc', h:0}, {k:'p7-move', label:'잘라서 옮길 생각을 못 했어요', short:'잘라 옮기기', cat:'idea', h:1}, {k:'p7-sector', label:'옮긴 모양이 중심각 60°인 부채꼴인 걸 몰랐어요', short:'60° 부채꼴', cat:'concept', h:2}, {k:'p7-calc', label:'한 조각을 3배 하거나 계산하다가 실수했어요', short:'계산', cat:'calc', h:2}],
  }
 ];
 
 /* ---------------- 확인 문제 (쌍둥이 문제, 책 덮고) ----------------
    ok: 정답 번호(0부터), why: 오답을 고른 학생이 무엇을 놓쳤는지 교사 참고용
+   inp·vals(있으면): 보기 대신 답을 직접 입력. vals[i] = 보기 i의 값(칸마다, π는 'π'로). 적은 답이 어느 보기와 같은지로 실수를 알아냄
 ------------------------------------------------------- */
 const TWINS = [
  { id:'t1', of:'p1', text:`원 O에서 ${A('AB')} : ${A('BC')} : ${A('CA')} = 3 : 4 : 5일 때, ${A('CA')}에 대한 중심각의 크기는?`,
    fig:()=>FIG.circle3(3,4,5),
    ch:['150°','75°','120°','100°'], ok:0,
+   inp:[{l:'중심각',u:'°'}], vals:[['150'],['75'],['120'],['100']],
    why:['', '360° 대신 180°를 나눔', '다른 호(BC)의 중심각', '비를 잘못 계산'],
    exp:`세 중심각의 합 360°를 3 : 4 : 5로 나누면 ${A('CA')}의 중심각 = 360° × ${FR(5,12)} = 150°` },
  { id:'t2', of:'p2', text:`반지름의 길이가 6 cm이고 중심각의 크기가 120°인 부채꼴의 호의 길이와 넓이는?`,
    fig:null,
    ch:[`호 4${PI} cm, 넓이 12${PI} cm²`,`호 12${PI} cm, 넓이 4${PI} cm²`,`호 2${PI} cm, 넓이 6${PI} cm²`,`호 4${PI} cm, 넓이 36${PI} cm²`], ok:0,
+   inp:[{l:'호의 길이',u:'cm'},{l:'넓이',u:'cm²'}], vals:[['4π','12π'],['12π','4π'],['2π','6π'],['4π','36π']],
    why:['', '원의 둘레와 넓이를 바꿔 씀', '둘레를 πr로 착각', '넓이에 1/3을 곱하지 않음'],
    exp:`120°는 360°의 ${FR(1,3)} → 호 = 12${PI} × ${FR(1,3)} = 4${PI} cm, 넓이 = 36${PI} × ${FR(1,3)} = 12${PI} cm²` },
  { id:'t3', of:'p3', text:`원 O에서 현 AC와 지름 AB가 이루는 각의 크기가 20°일 때, ${A('AC')} : ${A('CB')}는?`,
    fig:()=>FIG.diam(20),
    ch:['7 : 2','2 : 7','8 : 1','5 : 4'], ok:0,
+   inp:[{l:'',u:''},{l:':',u:''}], ratio:true, vals:[['7','2'],['2','7'],['8','1'],['5','4']],
    why:['', '비의 순서를 바꿈', '∠BOC를 20°로 착각 (보조선 없이)', '앞 문제의 답을 그대로 씀'],
    exp:`${OV('OC')}를 그으면 ∠OCA = 20° → ∠AOC = 140°, ∠BOC = 40° → 140 : 40 = 7 : 2` },
  { id:'t4', of:'p4', text:`한 변의 길이가 4 cm인 정사각형에 그림과 같이 두 사분원을 그렸다. 색칠한 부분의 넓이는? (이번엔 가운데가 색칠되어 있어요!)`,
    fig:()=>FIG.lens(4,true),
    ch:[`(8${PI} − 16) cm²`,`(32 − 8${PI}) cm²`,`(16 − 4${PI}) cm²`,`4${PI} cm²`], ok:0,
+   inp:[{l:'넓이',u:'cm²'}], vals:[['8π-16'],['32-8π'],['16-4π'],['4π']],
    why:['', '색칠하지 않은 바깥 부분을 구함', '바깥 한 조각만 구함', '사분원 하나의 넓이'],
    exp:`(가운데) = (사분원 2개) − (정사각형) = 2 × 4${PI} − 16 = (8${PI} − 16) cm²` },
  { id:'t5', of:'p5', text:`반원 O에서 ${OV('AC')} ∥ ${OV('OD')}, ∠BOD = 40°, ${A('BD')} = 4 cm일 때, ${A('AC')}의 길이는?`,
    fig:()=>FIG.semi(40,4),
    ch:['10 cm','14 cm','8 cm','16 cm'], ok:0,
+   inp:[{l:'호 AC',u:'cm'}], vals:[['10'],['14'],['8'],['16']],
    why:['', '∠AOC를 180° − 40° = 140°로 착각', '∠AOC를 80°로 착각', '앞 문제처럼 4배라고 생각'],
    exp:`∠OAC = 40° (동위각), ∠OCA = 40° (이등변삼각형) → ∠AOC = 100°. 40 : 100 = 4 : ${A('AC')} → 10 cm` },
  { id:'t6', of:'p6', text:`한 변의 길이가 2 cm인 정삼각형 ABC로 ⑥과 같이 부채꼴 세 개를 그렸을 때, 색칠한 부분의 넓이는?`,
    fig:()=>FIG.spiral(2),
    ch:[`${FR('56'+PI,3)} cm²`,`${FR('28'+PI,3)} cm²`,`56${PI} cm²`,`4${PI} cm²`], ok:0,
+   inp:[{l:'넓이',u:'cm²'}], vals:[['56π/3'],['28π/3'],['56π'],['4π']],
    why:['', '중심각을 60°로 착각', '원의 1/3을 곱하지 않음', '반지름을 모두 2 cm로 착각'],
    exp:`중심각 120°(원의 ${FR(1,3)}), 반지름 2, 4, 6 → ${FR(1,3)}(4${PI} + 16${PI} + 36${PI}) = ${FR('56'+PI,3)} cm²` },
  { id:'t7', of:'p7', text:`한 변의 길이가 6 cm인 정삼각형의 각 변을 지름으로 하는 반원을 ⑦과 같이 그렸을 때, 색칠한 부분의 넓이는?`,
    fig:()=>FIG.tri3(6),
    ch:[`${FR('9'+PI,2)} cm²`,`${FR('3'+PI,2)} cm²`,`${FR('27'+PI,2)} cm²`,`9${PI} cm²`], ok:0,
+   inp:[{l:'넓이',u:'cm²'}], vals:[['9π/2'],['3π/2'],['27π/2'],['9π']],
    why:['', '한 조각만 구함', '반원 3개의 넓이를 더함', '중심각을 120°로 착각'],
    exp:`한 조각을 옮기면 반지름 3 cm, 중심각 60°인 부채꼴 → 9${PI} × ${FR(1,6)} × 3 = ${FR('9'+PI,2)} cm²` }
 ];
@@ -331,6 +339,9 @@ let A1_LAST=-1, A2_LAST='';
 const CONCEPTS=['중심각','호의 길이','반지름','넓이'];
 const KN=(c,v,t)=>`<span data-r="know" data-c="${c}" data-v="${v}">${t}</span>`;
 const WN=(c,t)=>`<span data-r="want" data-c="${c}">${t}</span>`;
+/* 그림에만 수가 있는 문제: 문장에 개념 이름이 없으니, 그림 속 수마다 이름표를 붙여요 */
+const LABEL0=items=>({tag:'0단계', kind:'label', concepts:CONCEPTS, items, q:'그림 속 수마다 무엇인지 이름표를 붙여요. 🎯는 구할 것, 📌는 아는 것이에요.'});
+const XT=`<i class="mv">x</i>`;
 const STEP0={tag:'0단계', kind:'mark', concepts:CONCEPTS, q:'문제에서 <b style="color:#c0392b">구할 것</b>은 🎯빨강, <b style="color:#1f5fbf">아는 것</b>은 📌파랑으로 칠하고, 칠한 곳마다 무엇인지 이름표를 붙여요.'};
 const BASIC_GEN={
   A1(){
@@ -371,9 +382,11 @@ const BASIC_GEN={
       s2={tag:'2단계', q:`${what}끼리 비교해요. ${what}도 중심각과 <b>같은 배</b>가 돼요. ${L} × ${kTxt} = ?`, kind:'num', ans:x, suffix:u};
       exp=`[0단계] 🎯 구할 것: ${what} · 📌 아는 것: 중심각 ${a}°, ${what} ${L} ${u}, 중심각 ${b}°<br>[1단계] ${b} = ${a} × ${kTxt}<br>[2단계] ${what}도 ${kTxt}배 → ${L} × ${kTxt} = <b>${x} ${u}</b>`;
     }
-    return {text:`한 원에서 ${KN('중심각',a+'°',`중심각의 크기가 ${a}°`)}인 부채꼴의 ${KN(what,L+' '+u,`${what}가 ${L} ${u}`)}일 때, ${KN('중심각',b+'°',`중심각의 크기가 ${b}°`)}인 부채꼴의 ${WN(what,`${what}를 구하시오`)}.`,
+    const figOnly=Math.random()<0.4;
+    const s0= figOnly? LABEL0([{v:a+'°',c:'중심각',r:'know'},{v:`${L} ${u}`,c:what,r:'know'},{v:b+'°',c:'중심각',r:'know'},{v:`x ${u}`,c:what,r:'want'}]) : STEP0;
+    return {text: figOnly? `그림과 같이 한 원에서 두 부채꼴을 그렸을 때, ${XT}의 값을 구하시오.` : `한 원에서 ${KN('중심각',a+'°',`중심각의 크기가 ${a}°`)}인 부채꼴의 ${KN(what,L+' '+u,`${what}가 ${L} ${u}`)}일 때, ${KN('중심각',b+'°',`중심각의 크기가 ${b}°`)}인 부채꼴의 ${WN(what,`${what}를 구하시오`)}.`,
       fig:twoSectorFig(a,b,`${L} ${u}`,`${XI} ${u}`,area), kind:'num', ans:x, suffix:u,
-      steps:[STEP0, s1, s2], exp};
+      steps:[s0, s1, s2], exp};
   },
   C(){
     const area=Math.random()<0.5;
@@ -385,8 +398,10 @@ const BASIC_GEN={
     const cand=[]; if(th<180) cand.push(fracH(th,180)); cand.push(fracH(360-th,360)); if(th<=100) cand.push(fracH(th,100));
     for(const [n,d] of shuffle([[1,2],[1,3],[1,4],[2,3],[3,4],[1,6],[5,6],[3,8],[5,8],[5,12],[1,5],[2,5]])) cand.push(fracH(n,d));
     const fr=mc(fOk,[...new Set(cand)].filter(c=>c!==fOk).slice(0,3));
-    return {text:`${KN('반지름',r+' cm',`반지름의 길이가 ${r} cm`)}이고 ${KN('중심각',th+'°',`중심각의 크기가 ${th}°`)}인 부채꼴의 ${WN(area?'넓이':'호의 길이',`${what}를 구하시오`)}.`,
-      fig:sectorFig({theta:th, mid:th>180?270:rnd([90,90,60,120]), rLabel:`${r} cm`, angLabel:`${th}°`, shade:area, arcLabel:area?null:'? cm', inLabel:null}),
+    const figOnly=Math.random()<0.4, wc=area?'넓이':'호의 길이';
+    return {text: figOnly? `그림의 부채꼴에서 ${XT}의 값을 구하시오.` : `${KN('반지름',r+' cm',`반지름의 길이가 ${r} cm`)}이고 ${KN('중심각',th+'°',`중심각의 크기가 ${th}°`)}인 부채꼴의 ${WN(wc,`${what}를 구하시오`)}.`,
+      fig:sectorFig({theta:th, mid:th>180?270:rnd([90,90,60,120]), rLabel:`${r} cm`, angLabel:`${th}°`, shade:area, arcLabel:area?null:(figOnly?`${XI} cm`:'? cm'), inLabel:area&&figOnly?`${XI} cm²`:null}),
+      s0:figOnly? LABEL0([{v:r+' cm',c:'반지름',r:'know'},{v:th+'°',c:'중심각',r:'know'},{v:`x ${u}`,c:wc,r:'want'}]) : null,
       kind:'num', ans:coef, suffix:`${PI} ${u}`,
       steps:[
         STEP0,
@@ -401,8 +416,10 @@ const BASIC_GEN={
     for(;;){ r=ri(3,12); k=ri(2,12); th=180*k/r; if((k*r)%2===0 && th>=30 && th<=300) break; }
     const S=k*r/2;
     const f=mc('½ × (호의 길이) × (반지름)',['(호의 길이) × (반지름)','½ × (반지름) × (반지름)','2 × (호의 길이) × (반지름)']);
-    return {text:`${KN('반지름',r+' cm',`반지름의 길이가 ${r} cm`)}이고 ${KN('호의 길이',k+'π cm',`호의 길이가 ${k}${PI} cm`)}인 부채꼴의 ${WN('넓이','넓이를 구하시오')}.`,
-      fig:sectorFig({theta:th, mid:th>180?270:90, rLabel:`${r} cm`, shade:true, arcLabel:`${k}${PI} cm`}),
+    const figOnly=Math.random()<0.4;
+    return {text: figOnly? `그림의 부채꼴에서 ${XT}의 값을 구하시오.` : `${KN('반지름',r+' cm',`반지름의 길이가 ${r} cm`)}이고 ${KN('호의 길이',k+'π cm',`호의 길이가 ${k}${PI} cm`)}인 부채꼴의 ${WN('넓이','넓이를 구하시오')}.`,
+      fig:sectorFig({theta:th, mid:th>180?270:90, rLabel:`${r} cm`, shade:true, arcLabel:`${k}${PI} cm`, inLabel:figOnly?`${XI} cm²`:null}),
+      s0:figOnly? LABEL0([{v:r+' cm',c:'반지름',r:'know'},{v:k+'π cm',c:'호의 길이',r:'know'},{v:'x cm²',c:'넓이',r:'want'}]) : null,
       kind:'num', ans:S, suffix:`${PI} cm²`,
       steps:[
         STEP0,
@@ -415,9 +432,9 @@ const BASIC_GEN={
 const BASIC_TYPES=[
   {k:'A1', name:'개념 빈칸', desc:'원·호·현·부채꼴·활꼴의 뜻', steps:[]},
   {k:'A2', name:'그림 보고 이름 고르기', desc:'이건 호일까 현일까? 부채꼴일까 아닐까?', steps:[]},
-  {k:'B',  name:'중심각과 호의 길이', desc:'중심각이 2배면 호의 길이도 2배', steps:['0단계 구할 것·아는 것','1단계 중심각 비교','2단계 호의 길이·넓이 비교']},
-  {k:'C',  name:'[반지름, 중심각] → 호의 길이·넓이', desc:'원의 몇 분의 몇 조각인지 구하기', steps:['0단계 구할 것·아는 것','1단계 원의 둘레·넓이','2단계 몇 분의 몇','3단계 답']},
-  {k:'D',  name:'[반지름, 호의 길이] → 넓이', desc:'½ × 호의 길이 × 반지름', steps:['0단계 구할 것·아는 것','1단계 공식','2단계 답']}
+  {k:'B',  name:'중심각과 호의 길이', desc:'중심각이 2배면 호의 길이도 2배', rule:'중심각의 비 = 호의 길이(넓이)의 비', steps:['0단계 구할 것·아는 것','1단계 중심각 비교','2단계 호의 길이·넓이 비교']},
+  {k:'C',  name:'[반지름, 중심각] → 호의 길이·넓이', desc:'원의 몇 분의 몇 조각인지 구하기', rule:'부채꼴 = 원의 (중심각)/360 조각', steps:['0단계 구할 것·아는 것','1단계 원의 둘레·넓이','2단계 몇 분의 몇','3단계 답']},
+  {k:'D',  name:'[반지름, 호의 길이] → 넓이', desc:'½ × 호의 길이 × 반지름', rule:'넓이 = ½ × 호의 길이 × 반지름', steps:['0단계 구할 것·아는 것','1단계 공식','2단계 답']}
 ];
 /* 각 문제에서 막혔을 때 권할 기초 유형 */
 const BASIC_FOR={p1:['B','C'], p2:['C','A1'], p3:['A2','B'], p4:['C','D'], p5:['A2','B'], p6:['C','A2'], p7:['C','D']};
