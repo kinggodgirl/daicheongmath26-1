@@ -167,7 +167,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.8;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.9;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -400,8 +400,8 @@ function newBasic(){
   UI.BS={it, mode:(it.steps.length && st.ok<2)?'steps':'direct', si:0, tries:0, wrong:false, ws:0, done:false, msg:'', picked:null, rev:{}, stepVals:{}};
 }
 function streakHTML(st){ const n=Math.min(st.streak,3); return `<span class="streak">연속 정답 ${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}${st.star?' <span class="stars">⭐</span>':''}</span>`; }
-function choiceBtns(chs,onPick,state){ // state: {done, ok, picked, wide}
-  return `<div class="chs ${state.wide?'wide':''}">${chs.map((c,i)=>{ let cls=''; if(state.done){ if(i===state.ok) cls='right'; else if(i===state.picked) cls='wrong'; }
+function choiceBtns(chs,onPick,state){ // state: {done, ok, picked, wide, also}
+  return `<div class="chs ${state.wide?'wide':''}">${chs.map((c,i)=>{ let cls=''; if(state.done){ if(i===state.ok) cls='right'; else if(i===state.picked) cls=(state.also&&state.also[i]!=null)?'right':'wrong'; }
     return `<button class="${cls}" ${state.done?'disabled style="opacity:1"':''} onclick="${onPick}(${i})">${state.wide?'':`<span class="n">${NUM[i]||''}</span>`}${c}</button>`; }).join('')}</div>`;
 }
 function viewBT(){
@@ -409,7 +409,7 @@ function viewBT(){
   let h=`<div class="phead"><span class="tt" style="font-size:20px;color:var(--ink)">🧱 ${b.name}</span>${streakHTML(st)}<button class="ghost mini" onclick="go('bas')">← 유형 고르기</button></div>`;
   h+=`<div class="card"><div class="pbox ${it.fig?'':'nofig'}"><div class="ptext">${it.text}</div>${it.fig?`<div class="figw">${it.fig}</div>`:''}</div>`;
   if(it.kind==='mc'){
-    h+=choiceBtns(it.choices,'basPickMC',{done:S.done,ok:it.ok,picked:S.picked,wide:it.wide});
+    h+=choiceBtns(it.choices,'basPickMC',{done:S.done,ok:it.ok,picked:S.picked,wide:it.wide,also:it.also});
   } else if(S.mode==='direct'){
     h+= S.done? '' : `<div class="numin"><input class="ans" type="text" inputmode="decimal" autocomplete="off"><span class="sfx">${it.suffix}</span><button class="acc" onclick="basSubmitNum()">확인</button></div>`;
     if(S.msg) h+=`<div class="msg ${S.msgOk?'r':'w'}">${S.msg}</div>`;
@@ -430,7 +430,7 @@ function viewBT(){
       return row+`</div>`; }).join('')}</div>`;
   }
   if(S.done){
-    h+= !S.wrong? `<div class="verdict r">⭕ 정답!${st.streak>=3&&st.streak===3?' 연속 3개 — ⭐ 획득!':''}</div>` : `<div class="verdict w">${it.kind==='mc'?'❌ 아쉬워요':'끝까지 풀었어요! 다음엔 한 번에 맞혀 봐요'}</div>`;
+    h+= !S.wrong? `<div class="verdict r">⭕ 정답!${st.streak>=3&&st.streak===3?' 연속 3개 — ⭐ 획득!':''}</div>${S.alsoMsg?`<div class="exp" style="background:var(--o-soft);border-radius:10px;padding:8px 12px;font-weight:700">${S.alsoMsg}</div>`:''}` : `<div class="verdict w">${it.kind==='mc'?'❌ 아쉬워요':'끝까지 풀었어요! 다음엔 한 번에 맞혀 봐요'}</div>`;
     h+=`<div class="exp">${it.exp}</div><div class="next"><button class="acc" id="nextQ" onclick="newBasic();render()">다음 문제 →</button>
       ${st.star?`<button class="ghost" onclick="go('list')">문제 목록으로 돌아가 다시 도전</button>`:''}</div>`;
   }
@@ -443,7 +443,7 @@ function parseNum(v){
   const [a,b]=t.split('/'); const x=b==null?+a:(+a)/(+b); return Number.isFinite(x)?x:null;
 }
 function numEq(v,a){ const x=parseNum(v); return x!=null && Math.abs(x-a)<1e-9; }
-function basPickMC(i){ const S=UI.BS; if(S.done) return; S.picked=i; S.wrong= i!==S.it.ok; basFinish(); }
+function basPickMC(i){ const S=UI.BS; if(S.done) return; const al=(S.it.also||{})[i]; S.picked=i; S.wrong= i!==S.it.ok && al==null; S.alsoMsg= i!==S.it.ok ? al||'' : ''; basFinish(); }
 function basSubmitNum(){
   const S=UI.BS, inp=document.querySelector('#view input.ans'); if(!inp||S.done) return; const v=inp.value.trim(); if(!v) return;
   if(parseNum(v)==null){ toast('숫자만 넣어 주세요. (π와 단위는 칸 옆에 있어요 · 분수는 3/2처럼)'); inp.select(); return; }
