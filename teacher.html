@@ -165,7 +165,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.10;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.11;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -304,7 +304,9 @@ const okPid=pid=>!!PBY[pid], okTid=tid=>!!TBY[tid], okB=k=>!!BBY[k];
 function mergeRec(r,x){
   for(const pid in (x.diag||{})) if(okPid(pid)&&['o','t','x'].includes(x.diag[pid])&&!r.diag[pid]) r.diag[pid]=x.diag[pid];
   for(const pid in (x.seen||{})) if(okPid(pid)) r.seen[pid]=true;
-  for(const pid in (x.hint||{})) if(okPid(pid)){ const h=r.hint[pid]||{}, y=x.hint[pid]||{}; r.hint[pid]={lv:Math.min(PBY[pid].hints.length,Math.max(h.lv||0,+y.lv||0)), sol:!!(h.sol||y.sol)}; }
+  for(const pid in (x.hint||{})) if(okPid(pid)){ const h=r.hint[pid]||{}, y=x.hint[pid]||{}; r.hint[pid]={lv:Math.min(PBY[pid].hints.length,Math.max(h.lv||0,+y.lv||0)), sol:!!(h.sol||y.sol)};
+    const ha={}; for(const q in Object.assign({},h.ha,y.ha)){ if(!/^h\d{1,2}$/.test(q)) continue; const a=(y.ha||{})[q]||(h.ha||{})[q]; const v=Array.isArray(a.v)?a.v:Object.values(a.v||{}); ha[q]={ok:!!a.ok, n:Math.min(999,+a.n||0), v:v.slice(0,5).map(z=>String(z).slice(0,20))}; }
+    if(Object.keys(ha).length) r.hint[pid].ha=ha; }
   for(const pid in (x.solved||{})) if(okPid(pid)&&!r.solved[pid]){ const y=x.solved[pid]||{}; r.solved[pid]={lv:+y.lv||0,sol:!!y.sol,cause:CN[y.cause]?y.cause:null}; }
   for(const tid in (x.twin||{})) if(okTid(tid)){ const y=x.twin[tid]||{}, cur=Object.assign({},r.twin[tid]); const a=+y.a;
     if(y.open) cur.open=true; if(cur.a==null&&y.a!=null&&a>=0&&a<TBY[tid].ch.length) cur.a=a; if(!cur.cause&&CN[y.cause]) cur.cause=y.cause;
@@ -340,10 +342,14 @@ function mergeNames(){
 function removeName(n){ if(!confirm(`'${n}' 학생의 기록을 지울까요?`)) return; delete S.recs[n]; save(); if(base) base.child('stu/'+fbKey(n)).remove(); render(); }
 
 /* ---------- 분석 ---------- */
+/* 힌트 질문에 답했지만 아직 못 맞힌 것: [{i, n, v}] */
+function hintMiss(r,p){ const ha=((r.hint[p.id]||{}).ha)||{}, out=[]; for(const q in ha){ const a=ha[q]; if(!a.ok&&a.n) out.push({i:+q.slice(1),n:a.n,v:a.v||[]}); } return out.sort((a,b)=>a.i-b.i); }
+function hintAnsTxt(r,p){ const ha=((r.hint[p.id]||{}).ha)||{}; return Object.keys(ha).sort().map(q=>`H${q.slice(1)}${ha[q].ok?'⭕':'❌'}${ha[q].n}회(${(ha[q].v||[]).join('/')})`).join(' '); }
 function flagsOf(n){
   const r=R(n), f=[];
   for(const p of P){ const d=r.diag[p.id], h=r.hint[p.id]||{}, sv=r.solved[p.id];
     if((d==='t'||d==='x') && !sv && (h.lv||0)>=p.hints.length) f.push({c:'r', k:p.id+(h.sol?'s':''), t:`${p.no} 힌트 다 보고도 못 품${h.sol?' (풀이 봄)':''}`, w:3}); }
+  for(const p of P){ if(r.solved[p.id]) continue; for(const m of hintMiss(r,p)) if(m.n>=3) f.push({c:'y', k:p.id+'h'+m.i+'-'+m.n, t:`${p.no} 힌트${m.i} 질문 ${m.n}번 틀림 (적은 답: ${esc(m.v.join(', '))})`, w:2}); }
   for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok) f.push({c:'y', k:t.id, t:`확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${t.why[x.a]||''}`, w:2}); }
   for(const b of BT){ const x=r.bas[b.k]; if(x&&x.recent&&x.recent.length>=3&&x.recent.slice(-3).every(v=>!v)) f.push({c:'p', k:b.k+'-'+x.n, t:`기초 ${b.name}: 3번 연속 틀림`, w:3}); }
   if(onlineNames().has(n) && r.progT && now()-r.progT>STALL_MIN*60000) f.push({c:'g', k:'stall-'+r.progT, t:`${Math.floor((now()-r.progT)/60000)}분째 진행 없음`, w:1});
@@ -416,7 +422,7 @@ function panelProb(){
       <div class="stat" style="cursor:pointer" onclick="toggleNames('${k}')">처음에 막힘(△×) <b>${stuck.length}</b> → 다시 풀어 해결 <b>${solved.length}</b>${solved.length?` <span class="m">(힌트로 ${byHint} · 풀이 보고 ${bySol})</span>`:''} · 아직 <b style="color:var(--x)">${notYet.length}</b>
         ${t.none?'':`&nbsp;|&nbsp; 확인 문제 <b>${right}</b>/${ts.sub} 정답${ts.open-ts.sub>0?` <span class="m">(푸는 중 ${ts.open-ts.sub})</span>`:''}`}
         ${Object.keys(causes).length?` &nbsp;|&nbsp; 막힌 이유: ${Object.entries(causes).map(([cc,v])=>`${CN[cc]} <b>${v}</b>`).join(' · ')}`:''} <span class="m">▾</span></div>
-      ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생:</b> ${tags(notYet.map(x=>{const hh=R(x).hint[p.id]; return x+(hh&&hh.lv?` (힌트${hh.lv})`:'');}))}<br><b>확인 문제 틀림:</b> ${tags(names.filter(x=>{const y=R(x).twin[t.id]; return y&&y.a!=null&&y.a!==t.ok;}))}</div>`:''}</div>`; });
+      ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생:</b> ${tags(notYet.map(x=>{const hh=R(x).hint[p.id]; const ms=hintMiss(R(x),p).filter(m=>m.i===(hh&&hh.lv)); return x+(hh&&hh.lv?` (힌트${hh.lv}${ms.length?` 답 ❌${ms[0].n}`:''})`:'');}))}<br><b>확인 문제 틀림:</b> ${tags(names.filter(x=>{const y=R(x).twin[t.id]; return y&&y.a!=null&&y.a!==t.ok;}))}</div>`:''}</div>`; });
   h+=`<div class="grp" style="margin-top:20px"><b>학생별 현황</b> · 기호=채점, H=연 힌트 수, ✔=다시 풀어 해결, ⭕❌=확인 문제</div>`;
   h+=`<table class="mx"><tr><th>학생</th>${P.map(p=>`<th>${p.no}</th>`).join('')}<th>기초 ⭐</th></tr>`+names.map(n=>{ const r=R(n);
     return `<tr><td class="nm">${esc(n)}</td>${P.map(p=>{ const d=r.diag[p.id], hh=r.hint[p.id], sv=r.solved[p.id], x=r.twin[TOF[p.id].id], tw=x&&x.a!=null?(x.a===TOF[p.id].ok?'⭕':'❌'):(x&&x.open?'…':'');
@@ -509,10 +515,10 @@ function download(name,text,type){ const a=document.createElement('a'); a.href=U
 function stamp(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
 function exportCSV(){
   const q=s=>`"${String(s??'').replace(/"/g,'""')}"`, W={o:'맞음',t:'막힘',x:'틀림'};
-  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`,`${p.no}확인답`,`${p.no}확인정오`,`${p.no}확인이유`]),...BT.flatMap(b=>[`기초${b.k}푼수`,`기초${b.k}정답`,`기초${b.k}별`])];
+  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`,`${p.no}힌트답`,`${p.no}확인답`,`${p.no}확인정오`,`${p.no}확인이유`]),...BT.flatMap(b=>[`기초${b.k}푼수`,`기초${b.k}정답`,`기초${b.k}별`])];
   const rows=roster().map(n=>{ const r=R(n);
     return [n,...P.flatMap(p=>{ const hh=r.hint[p.id]||{}, sv=r.solved[p.id], t=TOF[p.id], x=r.twin[t.id]||{};
-      return [W[r.diag[p.id]]||'',hh.lv||0,hh.sol?'O':'',sv?'O':'',sv&&sv.cause?CN[sv.cause]:'', x.a!=null?x.a+1:'', x.a!=null?(x.a===t.ok?'O':'X'):'', x.cause?CN[x.cause]:'']; }),
+      return [W[r.diag[p.id]]||'',hh.lv||0,hh.sol?'O':'',sv?'O':'',sv&&sv.cause?CN[sv.cause]:'', hintAnsTxt(r,p), x.a!=null?x.a+1:'', x.a!=null?(x.a===t.ok?'O':'X'):'', x.cause?CN[x.cause]:'']; }),
       ...BT.flatMap(b=>{ const y=r.bas[b.k]; return y?[y.n,y.ok,y.star?'O':'']:['','','']; })]; });
   download(`단원마무리-${stamp()}.csv`,'\ufeff'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n'),'text/csv;charset=utf-8');
 }
