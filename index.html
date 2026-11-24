@@ -82,6 +82,14 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .hcard .hl{font-size:13px;font-weight:900;color:var(--acc);margin-bottom:2px}
 .hcard.sol{border-color:var(--o);background:var(--o-soft)}
 .hcard.sol .hl{color:var(--o)}
+.hchk{margin-top:10px;padding-top:10px;border-top:1px dashed #c9b8e6;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.hchk label{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:15px}
+.hchk input{width:92px;font-size:18px;padding:6px 8px;border:2px solid #c9b8e6;border-radius:10px;text-align:center}
+.hchk input.bad{border-color:var(--x);background:var(--x-soft)}
+.hchk input.good{border-color:var(--o);background:var(--o-soft)}
+.hchk button{padding:8px 16px}
+.hchk .hm{flex-basis:100%;font-size:14px;color:#7a5a00}
+.hdone{margin-top:8px;font-size:14px;font-weight:700;color:var(--o)}
 .rule{margin-top:10px;padding-top:8px;border-top:1px dashed #9cc8ad;font-weight:900}
 .next{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .next .cd{color:var(--muted);font-weight:700}
@@ -167,7 +175,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.10;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.11;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -340,16 +348,47 @@ function setDiag(pid,k){ if(k) REC.diag[pid]=k; else delete REC.diag[pid]; saveR
 function hintSection(p,s){
   const md=modeOf(p.id), lv=s.lv, n=s.n; let h='';
   if(md==='lock') return `<div class="lockmsg">🔒 선생님이 이 문제의 힌트를 잠갔어요. 함께 볼 거예요. 그동안 혼자 도전해 봐요!</div>`;
-  for(let i=0;i<lv&&i<n;i++) h+=`<div class="hcard"><div class="hl">힌트 ${i+1} / ${n}</div>${p.hints[i]}</div>`;
   const solShown=REC.hint[p.id]&&REC.hint[p.id].sol;
+  for(let i=0;i<lv&&i<n;i++) h+=`<div class="hcard"><div class="hl">힌트 ${i+1} / ${n}</div>${p.hints[i]}${hintCheckHTML(p,i,i===lv-1&&!solShown)}</div>`;
   if(solShown && md==='all') h+=`<div class="hcard sol"><div class="hl">풀이</div>${p.sol}<div class="rule">💡 ${p.rule}</div></div>`;
-  const left=waitLeft(p.id);
-  if(lv<n) h+=`<div class="next"><button class="acc" id="nextBtn" ${left?'disabled':''} onclick="openHint('${p.id}')">힌트 ${lv+1} 보기</button><span class="cd" id="cd">${left?`종이에 다시 풀어 보세요 · ${left}초 뒤에 열 수 있어요`:''}</span></div>`;
+  const left=waitLeft(p.id), ask=lv>0&&ckOf(p,lv-1)&&!hintOk(p.id,lv-1);
+  const wmsg=ask?`위 질문의 답을 맞히면 바로 열려요 · 아니면 ${left}초 뒤에 열 수 있어요`:`종이에 다시 풀어 보세요 · ${left}초 뒤에 열 수 있어요`;
+  if(lv<n) h+=`<div class="next"><button class="acc" id="nextBtn" ${left?'disabled':''} onclick="openHint('${p.id}')">힌트 ${lv+1} 보기</button><span class="cd" id="cd">${left?wmsg:''}</span></div>`;
   else if(!solShown){
-    if(md==='all') h+=`<div class="next"><button class="acc" id="nextBtn" ${left?'disabled':''} onclick="openSol('${p.id}')">풀이 보기</button><span class="cd" id="cd">${left?`힌트로 다시 풀어 보세요 · ${left}초 뒤에 열 수 있어요`:''}</span></div>`;
+    if(md==='all') h+=`<div class="next"><button class="acc" id="nextBtn" ${left?'disabled':''} onclick="openSol('${p.id}')">풀이 보기</button><span class="cd" id="cd">${left?(ask?wmsg:`힌트로 다시 풀어 보세요 · ${left}초 뒤에 열 수 있어요`):''}</span></div>`;
     else h+=`<div class="lockmsg">힌트를 모두 봤어요. 풀이는 선생님이 열어 주시면 볼 수 있어요.</div>`;
   }
   return h;
+}
+/* 힌트 질문에 답하기: 맞히면 기다림 없이 다음 힌트(또는 풀이)가 열림. 못 맞혀도 시간이 지나면 열림 */
+function ckOf(p,i){ const c=(p.checks||[])[i]; return Array.isArray(c)&&c.length?c:null; }
+function hintAns(pid,i){ const h=REC.hint[pid]; return h&&h.ha&&h.ha['h'+(i+1)]||null; }
+function hintOk(pid,i){ const a=hintAns(pid,i); return !!(a&&a.ok); }
+function hintCheckHTML(p,i,active){
+  const ck=ckOf(p,i); if(!ck) return '';
+  const a=hintAns(p.id,i);
+  if(a&&a.ok) return `<div class="hdone">✅ 맞았어요: ${ck.map((c,j)=>`${c.l} ${Number.isInteger(c.a)?c.a:esc(String((a.v||[])[j]??c.a))}${/^[°π]/.test(c.u)||!c.u?c.u:' '+c.u}`).join(', ')}</div>`;
+  if(!active) return '';
+  const last=a&&Array.isArray(a.v)?a.v:[];
+  return `<div class="hchk" data-pid="${p.id}" data-i="${i}">${ck.map((c,j)=>`<label>${c.l} <input class="hin" autocomplete="off" placeholder="${c.ph||''}" value="${esc(String(last[j]??''))}" onkeydown="if(event.key==='Enter')checkHint('${p.id}',${i})"> ${c.u}</label>`).join('')}
+    <button class="acc" onclick="checkHint('${p.id}',${i})">답 확인</button>
+    <div class="hm" id="hm">${a&&a.n?`아직 아니에요 (${a.n}번 시도). 힌트를 다시 읽고 종이에 써 보세요.`:'답을 적고 확인을 누르세요. 맞히면 다음 힌트를 바로 볼 수 있어요.'}</div></div>`;
+}
+function esc(v){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function hintNum(v){ return parseNum(String(v).replace(/파이|pi/gi,'')); }
+function checkHint(pid,i){
+  if(MIRROR) return;
+  const p=PBY[pid], ck=ckOf(p,i), box=document.querySelector(`#view .hchk[data-pid="${pid}"][data-i="${i}"]`); if(!ck||!box) return;
+  const ins=[...box.querySelectorAll('input.hin')], vs=ins.map(x=>x.value.trim().slice(0,20));
+  if(vs.some(v=>!v)){ toast('빈칸을 모두 채워 주세요'); return; }
+  const oks=ck.map((c,j)=>{ const x=hintNum(vs[j]); return x!=null&&Math.abs(x-c.a)<1e-6; });
+  const prev=hintAns(pid,i)||{}, ok=oks.every(Boolean);
+  const h=Object.assign({},REC.hint[pid]); h.ha=Object.assign({},h.ha); h.ha['h'+(i+1)]={v:vs, ok, n:(prev.n||0)+1};
+  if(ok) h.t=0;                      // 기다림 끝
+  REC.hint[pid]=h; saveRec(); send({t:'hint',pid,lv:hintLv(pid)});
+  if(ok){ toast(hintLv(pid)<p.hints.length?'맞아요! 다음 힌트를 바로 볼 수 있어요':'맞아요! 이제 다시 풀어 봐요'); render(); reveal('.next'); return; }
+  ins.forEach((x,j)=>{ x.classList.toggle('bad',!oks[j]); x.classList.toggle('good',oks[j]); });
+  const m=box.querySelector('#hm'); if(m) m.textContent=`아직 아니에요 (${h.ha['h'+(i+1)].n}번 시도).${ck.length>1?' 빨간 칸을 다시 생각해 보세요.':''} 힌트를 다시 읽고 종이에 써 보세요.`;
 }
 function openHint(pid){ const p=PBY[pid]; if(modeOf(pid)==='lock'||waitLeft(pid)) return;
   const lv=Math.min(p.hints.length,hintLv(pid)+1); REC.hint[pid]=Object.assign({},REC.hint[pid],{lv,t:Date.now()}); saveRec(); send({t:'hint',pid,lv}); render(); reveal('.hcard'); }
@@ -505,7 +544,8 @@ function mergeRec(a,b){
   b=b||{};
   for(const k in (b.diag||{})) if(!r.diag[k]) r.diag[k]=b.diag[k];
   for(const k in (b.seen||{})) r.seen[k]=true;
-  for(const k in (b.hint||{})){ const x=r.hint[k]||{}, y=b.hint[k]||{}; r.hint[k]={lv:Math.max(x.lv||0,y.lv||0), sol:!!(x.sol||y.sol), t:x.t||0}; }
+  for(const k in (b.hint||{})){ const x=r.hint[k]||{}, y=b.hint[k]||{}; r.hint[k]={lv:Math.max(x.lv||0,y.lv||0), sol:!!(x.sol||y.sol), t:x.t||0};
+    const ha=Object.assign({},y.ha,x.ha); for(const q in ha){ const xa=(x.ha||{})[q], ya=(y.ha||{})[q]; if(xa&&ya) ha[q]=(ya.ok&&!xa.ok)||(ya.ok===xa.ok&&(ya.n||0)>(xa.n||0))?ya:xa; } if(Object.keys(ha).length) r.hint[k].ha=ha; }
   for(const k in (b.solved||{})) if(!r.solved[k]) r.solved[k]=b.solved[k];
   for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null) x.a=y.a; if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
   for(const k in (b.bas||{})){ const x=r.bas[k], y=b.bas[k]||{}; if(!x||(y.n||0)>(x.n||0)) r.bas[k]=y; }
