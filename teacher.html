@@ -165,7 +165,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.12;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.13;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -311,7 +311,7 @@ function mergeRec(r,x){
   for(const tid in (x.twin||{})) if(okTid(tid)){ const y=x.twin[tid]||{}, cur=Object.assign({},r.twin[tid]); const a=+y.a;
     if(y.open) cur.open=true; if(cur.a==null&&y.a!=null&&a>=0&&a<TBY[tid].ch.length) cur.a=a; if(!cur.cause&&CN[y.cause]) cur.cause=y.cause;
     if(cur.open||cur.a!=null) r.twin[tid]=cur; }
-  for(const k in (x.bas||{})) if(okB(k)){ const y=x.bas[k]||{}, cur=r.bas[k]; if(!cur || (+y.n||0)>cur.n){ const ws={}; for(const w in (y.ws||{})) if(/^[0-5]$/.test(w)) ws[w]=+y.ws[w]||0;
+  for(const k in (x.bas||{})) if(okB(k)){ const y=x.bas[k]||{}, cur=r.bas[k]; if(!cur || (+y.n||0)>cur.n){ const ws={}; for(const w in (y.ws||{})) if(/^[0-9]$/.test(w)) ws[w]=+y.ws[w]||0;
       const rc=Array.isArray(y.recent)?y.recent:Object.values(y.recent||{});
       r.bas[k]={n:+y.n||0,ok:+y.ok||0,streak:+y.streak||0,star:!!y.star,recent:rc.slice(-5).map(Boolean),ws}; } }
 }
@@ -446,7 +446,7 @@ function panelBas(){
   let h=`<div class="tool"><span class="muted">학생이 "도저히 못 풀겠다" 싶을 때 스스로 들어오는 기초 연습이에요. 문제는 매번 새로 만들어지고, 연속 3개를 맞히면 ⭐.</span></div>`;
   h+=`<div class="help">${BT.map(b=>{ let n=0,ok=0,stars=0,people=0; const ws={};
       for(const x of all){ const y=R(x).bas[b.k]; if(!y) continue; people++; n+=y.n; ok+=y.ok; if(y.star) stars++; for(const w in (y.ws||{})) ws[w]=(ws[w]||0)+y.ws[w]; }
-      const wl=Object.entries(ws).filter(([w])=>+w>0).sort((a,c)=>c[1]-a[1]).map(([w,c])=>`${w}단계(${b.steps[w-1]||''}) ${c}`).join(' · ');
+      const wl=Object.entries(ws).filter(([w])=>+w>0).sort((a,c)=>c[1]-a[1]).map(([w,c])=>`${b.steps[w-1]||w+'번째 단계'} ${c}`).join(' · ');
       return `<div class="hc"><div class="nm" style="font-size:16px">${b.name}</div><div class="loc">${b.desc}</div>
         <div class="stat">연습한 학생 <b>${people}</b> · 푼 문제 <b>${n}</b> · 정답률 <b>${n?Math.round(ok/n*100):0}%</b> · ⭐ <b>${stars}</b>명</div>
         ${wl?`<div class="stat m">자주 틀린 단계: ${wl}</div>`:''}</div>`; }).join('')}</div>`;

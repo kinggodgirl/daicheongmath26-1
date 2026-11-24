@@ -175,7 +175,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.12;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.13;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
@@ -440,8 +440,8 @@ function viewBas(){
   return h+`</div><div style="margin-top:16px"><button class="ghost" onclick="go('list')">← 문제 목록으로 돌아가기</button></div>`;
 }
 function newBasic(){
-  const it=BG[UI.bt](), st=bstat(UI.bt);
-  UI.BS={it, mode:(it.steps.length && st.ok<2)?'steps':'direct', si:0, tries:0, wrong:false, ws:0, done:false, msg:'', picked:null, rev:{}, stepVals:{}};
+  const it=BG[UI.bt]();
+  UI.BS={it, mode:it.steps.length?'steps':'direct', si:0, tries:0, wrong:false, ws:0, done:false, msg:'', picked:null, rev:{}, stepVals:{}};
 }
 function streakHTML(st){ const n=Math.min(st.streak,3); return `<span class="streak">연속 정답 ${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}${st.star?' <span class="stars">⭐</span>':''}</span>`; }
 function choiceBtns(chs,onPick,state){ // state: {done, ok, picked, wide, also}
@@ -462,13 +462,14 @@ function viewBT(){
     h+=`<div class="steps">${it.steps.map((x,i)=>{
       if(i>S.si && !S.done) return '';
       const cur=(i===S.si && !S.done);
-      let row=`<div class="st ${cur?'':(S.rev[i]?'rev':'ok')}"><div class="q">${i+1}단계. ${x.q}</div>`;
+      let row=`<div class="st ${cur?'':(S.rev[i]?'rev':'ok')}"><div class="q">${x.tag?`[${x.tag}]`:`${i+1}단계.`} ${x.q}</div>`;
       if(cur){
-        if(x.kind==='mc') row+=choiceBtns(x.choices,'basPickStep',{done:false});
+        if(x.kind==='mc') row+=choiceBtns(x.choices,'basPickStep',{done:false,wide:x.wide});
+        else if(x.kind==='nums') row+=`<div class="numin">${x.pre?`<span class="sfx">${x.pre}</span>`:''}${x.ans.map(()=>`<input class="ans" type="text" inputmode="decimal" autocomplete="off" style="width:70px">`).join(`<span class="sfx">${x.sep||','}</span>`)}<button class="acc" onclick="basSubmitNum()">확인</button></div>`;
         else row+=`<div class="numin"><input class="ans" type="text" inputmode="decimal" autocomplete="off"><span class="sfx">${x.suffix||''}</span><button class="acc" onclick="basSubmitNum()">확인</button></div>`;
         if(S.tries) row+=`<div class="msg w">다시 생각해 봐요. (한 번 더 틀리면 답을 알려 줄게요)</div>`;
       } else {
-        const v= x.kind==='mc'? x.choices[x.ok] : `${x.ans} ${x.suffix||''}`;
+        const v= x.kind==='mc'? x.choices[x.ok] : x.kind==='nums'? `${x.pre?x.pre+' ':''}${x.ans.join(` ${x.sep||','} `)}` : `${x.suffix==='배'&&x.ans<1&&x.ans>0?'1/'+Math.round(1/x.ans):x.ans} ${x.suffix||''}`;
         row+=`<div class="msg ${S.rev[i]?'':'r'}">${S.rev[i]?'정답은 ':'✔ '}${v}</div>`;
       }
       return row+`</div>`; }).join('')}</div>`;
@@ -489,7 +490,12 @@ function parseNum(v){
 function numEq(v,a){ const x=parseNum(v); return x!=null && Math.abs(x-a)<1e-9; }
 function basPickMC(i){ const S=UI.BS; if(S.done) return; const al=(S.it.also||{})[i]; S.picked=i; S.wrong= i!==S.it.ok && al==null; S.alsoMsg= i!==S.it.ok ? al||'' : ''; basFinish(); }
 function basSubmitNum(){
-  const S=UI.BS, inp=document.querySelector('#view input.ans'); if(!inp||S.done) return; const v=inp.value.trim(); if(!v) return;
+  const S=UI.BS, inp=document.querySelector('#view input.ans'); if(!inp||S.done) return; const v=inp.value.trim();
+  const cs=S.mode==='steps'&&S.it.steps[S.si];
+  if(cs&&cs.kind==='nums'){ const ins=[...document.querySelectorAll('#view input.ans')], vs=ins.map(x=>x.value.trim()); if(vs.some(x=>!x)) return;
+    if(vs.some(x=>parseNum(x)==null)){ toast('숫자만 넣어 주세요'); return; }
+    basStep(vs.every((x,j)=>numEq(x,cs.ans[j]))); return; }
+  if(!v) return;
   if(parseNum(v)==null){ toast('숫자만 넣어 주세요. (π와 단위는 칸 옆에 있어요 · 분수는 3/2처럼)'); inp.select(); return; }
   if(S.mode==='direct'){
     if(numEq(v,S.it.ans)){ S.msg=''; basFinish(); }
