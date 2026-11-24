@@ -193,7 +193,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.14;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.15;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
@@ -630,6 +630,7 @@ function applyCfg(c){
     REC=emptyRec(); REC.resetSeen=c.resetAt; saveRec(); upload(); toast('선생님이 기록을 새로 시작했어요');
   }
   CFG={wait:Math.max(0,+c.wait||0), mode:c.mode||{}};
+  document.body.classList.toggle('fig-bold',c.fig==='bold');
   $('pauseOv').classList.toggle('on',!!c.paused); if(c.pauseMsg) $('pauseMsg').textContent=c.pauseMsg;
   const v=+c.ver||0; if(v&&v!==APP_VER&&CL.verWarn!==v){ CL.verWarn=v; const m=v>APP_VER?'⚠ 새 버전이 있어요. 이 화면을 새로고침해 주세요.':'⚠ 선생님 화면이 옛 버전이에요. 선생님께 새로고침을 부탁하세요.'; toast(m,6000); }
   if(UI.view!=='bt') render();
@@ -715,7 +716,7 @@ function authMsg(e){
 function startMirror(){
   addEventListener('message',e=>{
     if(e.origin!==location.origin||!e.data||e.data.type!=='mirror') return;
-    const d=e.data; REC=Object.assign(emptyRec(), d.rec||{}); CFG={wait:Math.max(0,+(d.cfg&&d.cfg.wait)||0), mode:(d.cfg&&d.cfg.mode)||{}};
+    const d=e.data; REC=Object.assign(emptyRec(), d.rec||{}); CFG={wait:Math.max(0,+(d.cfg&&d.cfg.wait)||0), mode:(d.cfg&&d.cfg.mode)||{}}; document.body.classList.toggle('fig-bold',!!(d.cfg&&d.cfg.fig==='bold'));
     $('who').textContent='👤 '+d.name;
     if(d.loc!=null){   // 학생이 지금 있는 곳으로
       const p=P.find(x=>d.loc.startsWith(x.no)), b=(d.loc.match(/^기초 (\S+)$/)||[])[1];

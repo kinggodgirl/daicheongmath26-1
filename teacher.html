@@ -126,6 +126,8 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
       <div class="card"><h3>✋ 전체 멈춤 <span class="muted" style="font-weight:400">(함께 볼 때)</span></h3>
         <input id="pauseMsg" type="text" maxlength="40">
         <button id="pauseBtn" style="width:100%;margin-top:6px" onclick="togglePause()">멈추기</button></div>
+      <div class="card"><h3>📐 그림 스타일</h3><button class="ghost sm" id="figBtn" style="width:100%" onclick="toggleFig()"></button>
+        <div class="muted" style="font-size:13px;margin-top:4px">TV·프로젝터로 띄울 때 선이 흐리면 굵은 선으로 바꾸세요.</div></div>
       <div class="card"><h3>기록</h3>
         <div class="btns"><button class="ghost sm" onclick="exportCSV()">⬇ CSV</button><button class="ghost sm" onclick="backup()">💾 백업</button>
         <button class="ghost sm" onclick="$('restoreFile').click()">📂 불러오기</button><button class="ghost sm" onclick="resetAll()">🔄 초기화</button>
@@ -165,7 +167,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.14;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.15;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -177,13 +179,13 @@ function toast(m,ms=2400){const t=$('toast');t.textContent=m;t.classList.add('on
 const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.concat(...P.map(p=>p.causes||[])).map(c=>[c.k,c.short])), NUM='①②③④';
 const STALL_MIN=5;   // 이 시간(분) 동안 진행이 없으면 '도울 학생'에 표시
 const SKEY='ur-t2-'+U.id;
-const DEF={code:null, wait:30, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0, ack:{}};
+const DEF={code:null, fig:'csat', wait:30, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0, ack:{}};
 let S=Object.assign({},DEF,LS.get(SKEY,{}));
 function save(){ LS.set(SKEY,S); }
 function newCode(){ return String(Math.floor(1000+Math.random()*9000)); }
 if(!S.code){ S.code=LS.get('ur-t-'+U.id,{}).code||newCode(); save(); }
 let LIVE={}, OPEN={}, OFFSET=0;   // LIVE: 서버의 학생 접속 정보 (이름 → p)
-$('ttl').textContent='교사용 · '+U.title; document.title='교사용 · '+U.title; $('pauseMsg').value=S.pauseMsg;
+$('ttl').textContent='교사용 · '+U.title; document.title='교사용 · '+U.title; $('pauseMsg').value=S.pauseMsg; figApply();
 
 /* ---------- 장부 ----------
    classes/{코드}/cfg          ← 이 화면이 씀 (기다리는 시간·문제별 잠금·멈춤·초기화 시각·버전)
@@ -201,7 +203,7 @@ const FB_OK=!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CON
 let db=null, base=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
 const fbKey=n=>encodeURIComponent(n).replace(/\./g,'%2E');
 const fbName=k=>{ try{ return decodeURIComponent(k); }catch(e){ return k; } };
-function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, unit:U.id, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
+function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({fig:S.fig==='bold'?'bold':'csat', wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, unit:U.id, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
 function pushCfg(){ save(); writeCfg(); render(); }
 
 /* ---------- 연결 ---------- */
@@ -235,11 +237,11 @@ function openClass(tries=0){
 /* 서버 설정을 이 화면에 반영. 바뀐 게 있으면 true */
 function adoptCfg(c){
   if(!c) return false;
-  const n={wait:c.wait!=null?Math.max(0,+c.wait||0):S.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||S.pauseMsg, resetAt:Math.max(+c.resetAt||0,S.resetAt||0)};
-  const cur={wait:S.wait,mode:S.mode,paused:S.paused,pauseMsg:S.pauseMsg,resetAt:S.resetAt||0};
+  const n={fig:c.fig==='bold'?'bold':'csat', wait:c.wait!=null?Math.max(0,+c.wait||0):S.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||S.pauseMsg, resetAt:Math.max(+c.resetAt||0,S.resetAt||0)};
+  const cur={fig:S.fig||'csat', wait:S.wait,mode:S.mode,paused:S.paused,pauseMsg:S.pauseMsg,resetAt:S.resetAt||0};
   if(JSON.stringify(n)===JSON.stringify(cur)) return false;
   if(n.resetAt>(S.resetAt||0)) S.recs={};   // 다른 화면에서 초기화함
-  Object.assign(S,n); save(); $('pauseMsg').value=S.pauseMsg; return true;
+  Object.assign(S,n); save(); $('pauseMsg').value=S.pauseMsg; figApply(); return true;
 }
 /* 코드 주인이 되거나(처음 연 화면), 열쇠로 들어온 화면이면 열쇠로 다시 들어감 */
 function claimClass(ref,uid){
@@ -262,8 +264,8 @@ function joinExisting(){
     const c=snap.val()||{};
     if(c.unit && c.unit!==U.id){ const u=UNITS.find(x=>x.id===c.unit); toast(`이 수업은 '${u?u.title:c.unit}' 단원이에요. 위에서 단원을 바꾼 뒤 다시 가져오세요.`,6000); return; }
     if(base){ try{ base.child('stu').off(); base.child('cfg').off(); }catch(e){} }
-    S=Object.assign({},DEF,{code,key,view:S.view,recs:{}, wait:c.wait!=null?Math.max(0,+c.wait||0):DEF.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||DEF.pauseMsg, resetAt:+c.resetAt||0});
-    save(); $('pauseMsg').value=S.pauseMsg; $('jCode').value=''; $('jKey').value=''; $('carryBox').classList.add('hide');
+    S=Object.assign({},DEF,{code,key,view:S.view,recs:{}, fig:c.fig==='bold'?'bold':'csat', wait:c.wait!=null?Math.max(0,+c.wait||0):DEF.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||DEF.pauseMsg, resetAt:+c.resetAt||0});
+    save(); figApply(); $('pauseMsg').value=S.pauseMsg; $('jCode').value=''; $('jKey').value=''; $('carryBox').classList.add('hide');
     showCode(); openClass(); render(); toast(`수업 ${code}을(를) 이어서 열었어요`,4000);
   }).catch(e=>{ toast(isDenied(e)?'코드나 열쇠가 맞지 않아요':authMsg(e),5000); });
 }
@@ -322,6 +324,9 @@ function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim(
 function setMode(pid,m){ S.mode[pid]=m; pushCfg(); }
 function setAllMode(m){ for(const p of P) S.mode[p.id]=m; pushCfg(); }
 function setWait(v){ S.wait=+v; pushCfg(); }
+/* 그림 스타일: 수능(가는 선) ↔ 굵은 선(프로젝터용). 학생 화면도 함께 바뀜 */
+function figApply(){ document.body.classList.toggle('fig-bold',S.fig==='bold'); const b=$('figBtn'); if(b) b.textContent=S.fig==='bold'?'🖊 굵은 선 (프로젝터용) 사용 중 → 수능 스타일로':'✏️ 수능 스타일 사용 중 → 굵은 선(프로젝터용)으로'; }
+function toggleFig(){ S.fig=S.fig==='bold'?'csat':'bold'; save(); figApply(); pushCfg(); updateMirror&&updateMirror(); toast(S.fig==='bold'?'그림을 굵은 선으로 바꿨어요 (학생 화면도)':'그림을 수능 스타일로 바꿨어요 (학생 화면도)'); }
 function toggleNames(k){ OPEN[k]=!OPEN[k]; render(); }
 function unlockName(n){ if(!confirm(`'${n}' 학생이 다른 기기로 들어올 수 있게 할까요?\n(기록은 그대로 이어져요. 지금 쓰던 기기에서는 더 이상 저장되지 않아요)`)) return;
   if(!base) return; base.child('stu/'+fbKey(n)+'/uid').remove().then(()=>toast(`'${n}' 학생이 새 기기에서 같은 이름으로 들어오면 돼요`,4000)).catch(e=>toast('실패: '+e.message)); }
@@ -496,7 +501,7 @@ function updateMirror(){
   const mn=$('mirName'); if(mn) mn.textContent='👀 '+(MIR.pick||'빈 화면')+(MIR.pick&&on.has(MIR.pick)?' · 접속 중':'');
   if(sel.dataset.o!==opts){ sel.innerHTML=opts; sel.dataset.o=opts; } sel.value=MIR.pick;
   const n=MIR.pick, r=n?R(n):blank(), {loc,progT,...rec}=r;
-  const msg={type:'mirror', name:n||'시연', rec, cfg:{wait:S.wait, mode:S.mode}, loc:(n&&$('mirFollow').checked)?(loc||''):null};
+  const msg={type:'mirror', name:n||'시연', rec, cfg:{wait:S.wait, mode:S.mode, fig:S.fig}, loc:(n&&$('mirFollow').checked)?(loc||''):null};
   const js=JSON.stringify(msg); if(js===MIR.sent||!fr.contentWindow) return; MIR.sent=js;
   try{ fr.contentWindow.postMessage(msg, location.origin); }catch(e){}
 }
@@ -534,7 +539,7 @@ function restore(inp){
 }
 function resetAll(){
   if(!confirm('학생 기록과 설정(기다리는 시간·문제별 잠금)을 모두 지울까요?\n먼저 [💾 백업]이나 [⬇ CSV]로 저장해 두는 것을 권해요.')) return;
-  const code=S.code, key=S.key; S=Object.assign({},DEF,{code,key,recs:{},mode:{},resetAt:now()}); save();
+  const code=S.code, key=S.key; S=Object.assign({},DEF,{code,key,fig:S.fig,recs:{},mode:{},resetAt:now()}); save();
   if(base) base.child('stu').remove();
   pushCfg(); toast('초기화했어요');
 }
