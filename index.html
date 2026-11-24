@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="common.css">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="unit.js"></script>
 <style>
@@ -155,7 +156,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261123.4;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.1;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
@@ -486,19 +487,44 @@ function connect(code){
   setState('수업을 찾는 중…');
   const base=db.ref('classes/'+code), my=CL.code;
   CL.joinT=setTimeout(()=>{ if(CL.code===my&&!CL.base) setState('⏳ 서버 응답이 늦어요. 와이파이를 확인하세요. 계속 기다리는 중…'); },10000);
-  base.child('cfg').once('value').then(snap=>{
+  let cfgSnap=null;
+  authReady().then(uid=>base.child('cfg').once('value').then(snap=>{
     if(CL.code!==my) return;
     if(!snap.exists()){ clearTimeout(CL.joinT); CL.code=null; setState(`수업 ${code}을(를) 찾지 못했어요. 선생님 화면이 열려 있는지, 코드가 맞는지 확인하세요.`); return; }
-    CL.key=fbKey(myName()); CL.base=base;
-    return me().child('rec').once('value').then(rs=>{
-      clearTimeout(CL.joinT);
-      REC=mergeRec(REC, rs.val()); saveRec();
-      applyCfg(snap.val()); upload();
-      db.ref('.info/connected').on('value',s=>{ const on=!!s.val(); if(on&&CL.base===base){ const p=me().child('p'); p.onDisconnect().update({online:false}); p.update({online:true,name:myName(),dev:deviceId,ver:APP_VER,loc:lastLoc||'',t:TS}); } setConn(on); });
-      base.child('cfg').on('value',s=>applyCfg(s.val()));
-      setState(`✔ 수업 ${code}에 연결됨`,true); showMain(); lastLoc=''; reportLoc();
-    });
-  }).catch(e=>{ clearTimeout(CL.joinT); CL.code=null; CL.base=null; setState('❌ 연결 오류: '+e.message); });
+    cfgSnap=snap; CL.key=fbKey(myName()); CL.base=base;
+    /* 이 이름을 이 기기 것으로 표시 (다른 기기가 먼저 쓰고 있으면 규칙이 막음) */
+    return me().child('uid').set(uid).catch(e=>{
+      if(CL.code!==my) return;
+      const err=new Error(isDenied(e)
+        ? `'${myName()}' 이름은 다른 기기에서 이미 쓰고 있어요. 번호와 이름이 맞는지 확인하세요. 기기를 바꿨다면 선생님께 [🔓 기기 바꾸기]를 부탁하세요.`
+        : '연결 오류: '+e.message);
+      err.ui=true; throw err;
+    }).then(()=>me().child('rec').once('value'));
+  })).then(rs=>{
+    if(CL.code!==my||!cfgSnap||!rs) return;
+    clearTimeout(CL.joinT);
+    REC=mergeRec(REC, rs.val()); saveRec();
+    applyCfg(cfgSnap.val()); upload();
+    db.ref('.info/connected').on('value',s=>{ const on=!!s.val(); if(on&&CL.base===base){ const p=me().child('p'); p.onDisconnect().update({online:false}); p.update({online:true,name:myName(),dev:deviceId,ver:APP_VER,loc:lastLoc||'',t:TS}); } setConn(on); });
+    base.child('cfg').on('value',s=>applyCfg(s.val()));
+    setState(`✔ 수업 ${code}에 연결됨`,true); showMain(); lastLoc=''; reportLoc();
+  }).catch(e=>{ if(CL.code!==my) return; clearTimeout(CL.joinT); CL.code=null; CL.base=null; setState('❌ '+(e.ui?e.message:authMsg(e))); });
+}
+/* 익명 로그인: 기기마다 보이지 않는 번호(uid)가 생기고, 데이터베이스 규칙이 이 번호로 '내 기록'을 구분함 */
+let authP=null;
+function authReady(){
+  if(!authP) authP=new Promise((res,rej)=>{
+    const un=firebase.auth().onAuthStateChanged(u=>{ un();
+      if(u) res(u.uid); else firebase.auth().signInAnonymously().then(c=>res(c.user.uid)).catch(e=>{ authP=null; rej(e); }); });
+  });
+  return authP;
+}
+function isDenied(e){ return /permission|denied/i.test(String((e&&(e.code||''))+' '+(e&&e.message||''))); }
+function authMsg(e){
+  const c=String(e&&e.code||'');
+  if(/admin-restricted|operation-not-allowed/.test(c)) return '익명 로그인이 꺼져 있어요. 선생님께 알려 주세요. (Firebase 콘솔 → Authentication → 익명)';
+  if(isDenied(e)) return '데이터베이스가 접근을 막았어요. 선생님께 알려 주세요. ('+e.message+')';
+  return '연결 오류: '+(e&&e.message||e);
 }
 function onData(){}
 
