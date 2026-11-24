@@ -82,6 +82,13 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 .chrow .cb>div{height:100%;background:#9aa7bd}
 .chrow.ok .cb>div{background:var(--o)}
 .chrow .why{grid-column:2/4;font-size:12px;color:var(--muted);margin-top:-3px}
+#mirWrap{display:flex;flex-direction:column;align-items:center}
+#mirWrap .mbar{display:none}
+#mirFrame{width:min(100%,834px);height:78vh;border:10px solid #1d2433;border-radius:22px;background:var(--paper)}
+#mirWrap.full{position:fixed;inset:0;z-index:200;background:var(--paper);padding:0}
+#mirWrap.full .mbar{display:flex;gap:12px;align-items:center;width:100%;padding:8px 14px;background:#fff;border-bottom:1px solid var(--line)}
+#mirWrap.full .mbar .muted{flex:1}
+#mirWrap.full #mirFrame{width:100%;height:auto;flex:1;border:0;border-radius:0}
 .pv{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .pv .q{display:grid;grid-template-columns:1fr 260px;gap:14px}
 .pv ol{margin:8px 0 0 22px}
@@ -158,7 +165,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.7;            // index.html 과 같은 값이어야 함
+const APP_VER=20261124.8;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -461,14 +468,26 @@ function panelMirror(){
   const src=studentURL().replace(/\?c=\d+$/,'')+'?demo=1&mirror=1&u='+encodeURIComponent(U.id);
   return `<div class="tool"><span class="info">볼 학생</span><select id="mirPick" onchange="MIR.pick=this.value;MIR.sent='';updateMirror()"></select>
       <label style="display:flex;gap:4px;align-items:center;font-size:14px"><input type="checkbox" id="mirFollow" checked onchange="MIR.sent='';updateMirror()"> 학생이 보는 문제 따라가기</label>
+      <button class="sm acc" onclick="mirFull(true)">⛶ 전체 화면</button>
       <span class="muted">학생 패드와 같은 화면이에요. 여기서 누르는 것은 학생 기록에 남지 않아요.</span></div>
-    <div style="display:flex;justify-content:center"><iframe id="mirFrame" src="${src}" title="학생 화면" style="width:min(100%,834px);height:78vh;border:10px solid #1d2433;border-radius:22px;background:var(--paper)" onload="MIR.sent='';updateMirror()"></iframe></div>`;
+    <div id="mirWrap"><div class="mbar"><b id="mirName"></b><span class="muted">Esc 또는 오른쪽 버튼으로 돌아가요</span><button class="ghost sm" onclick="mirFull(false)">✕ 전체 화면 닫기</button></div>
+      <iframe id="mirFrame" src="${src}" title="학생 화면" onload="MIR.sent='';updateMirror()"></iframe></div>`;
 }
+/* 전체 화면: 브라우저 전체 화면을 쓰고, 안 되면(일부 태블릿) 화면을 꽉 채우는 방식으로 */
+function mirFull(on){
+  const w=$('mirWrap'); if(!w) return;
+  const fsEl=document.fullscreenElement||document.webkitFullscreenElement;
+  if(on){ w.classList.add('full'); const rq=w.requestFullscreen||w.webkitRequestFullscreen; if(rq){ try{ const r=rq.call(w); if(r&&r.catch) r.catch(()=>{}); }catch(e){} } }
+  else { w.classList.remove('full'); if(fsEl){ const ex=document.exitFullscreen||document.webkitExitFullscreen; try{ const r=ex.call(document); if(r&&r.catch) r.catch(()=>{}); }catch(e){} } }
+}
+['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,()=>{ if(!(document.fullscreenElement||document.webkitFullscreenElement)){ const w=$('mirWrap'); if(w) w.classList.remove('full'); } }));
+addEventListener('keydown',e=>{ if(e.key==='Escape'){ const w=$('mirWrap'); if(w&&w.classList.contains('full')) mirFull(false); } });
 function updateMirror(){
   const sel=$('mirPick'), fr=$('mirFrame'); if(!sel||!fr) return;
   const names=roster(), on=onlineNames();
   if(MIR.pick && !names.includes(MIR.pick)) MIR.pick='';
   const opts='<option value="">빈 화면 (처음 들어온 학생)</option>'+names.map(n=>`<option value="${esc(n)}">${on.has(n)?'● ':'○ '}${esc(n)} · ${esc(R(n).loc||'-')}</option>`).join('');
+  const mn=$('mirName'); if(mn) mn.textContent='👀 '+(MIR.pick||'빈 화면')+(MIR.pick&&on.has(MIR.pick)?' · 접속 중':'');
   if(sel.dataset.o!==opts){ sel.innerHTML=opts; sel.dataset.o=opts; } sel.value=MIR.pick;
   const n=MIR.pick, r=n?R(n):blank(), {loc,progT,...rec}=r;
   const msg={type:'mirror', name:n||'시연', rec, cfg:{wait:S.wait, mode:S.mode}, loc:(n&&$('mirFollow').checked)?(loc||''):null};
