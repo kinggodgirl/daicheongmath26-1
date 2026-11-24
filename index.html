@@ -90,6 +90,13 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .hchk button{padding:8px 16px}
 .hchk .hm{flex-basis:100%;font-size:14px;color:#7a5a00}
 .hdone{margin-top:8px;font-size:14px;font-weight:700;color:var(--o)}
+.stg{font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;background:#eee;margin-left:6px}
+.stg.learn{background:#fff1cc}.stg.practice{background:#dff0ff}.stg.free{background:#e2f5e6}
+.errpick{margin-top:10px;padding:12px 14px;border-radius:12px;background:#fff6e6;border:2px solid #f0d49a}
+.cover{margin-top:12px;padding:14px;border-radius:12px;background:#f3f0ea;border:2px dashed #cdbfa6}
+.over{margin-top:10px;padding:10px 12px;border-radius:10px;background:#fff1f0;border:2px solid #f2c0ba;font-weight:600}
+.rulebox{margin-top:12px;padding:12px 14px;border-radius:12px;background:#fffbe6;border:2px solid #f1df8f}
+.rulebox.ok{background:var(--o-soft);border-color:#9fd3b0}
 .rule{margin-top:10px;padding-top:8px;border-top:1px dashed #9cc8ad;font-weight:900}
 .next{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .next .cd{color:var(--muted);font-weight:700}
@@ -193,14 +200,14 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.15;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.1;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
 const CBY=Object.fromEntries(CAUSE.concat(...P.map(p=>p.causes||[])).map(c=>[c.k,c]));
 function causesOf(pid){ const p=P.find(x=>x.id===pid); return p&&p.causes&&p.causes.length? p.causes.concat(CAUSE.filter(c=>c.k==='unsure')) : CAUSE; }
 function causeCat(k){ const c=CBY[k]; return c&&c.cat? c.cat : k; }
-const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
+const TBY=Object.fromEntries(TW.map(t=>[t.id,t])), PBY=Object.fromEntries(P.map(p=>[p.id,p])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 function toast(m,ms=2600){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),ms);}
@@ -211,11 +218,11 @@ if(!BT.length) $('navBas').classList.add('hide');   // 기초 연습이 없는 �
 $('hTitle').textContent=U.title; $('hSub').textContent=U.sub; $('mTitle').textContent=U.title; document.title=U.title;
 
 /* ---------- 상태 ---------- */
-let CFG={wait:30, mode:{}};
+let CFG={wait:30, mode:{}, lesson:'review', mix:0};
 if(DEMO) CFG.wait=5;
-function emptyRec(){ return {diag:{}, seen:{}, hint:{}, solved:{}, twin:{}, bas:{}}; }
+function emptyRec(){ return {diag:{}, seen:{}, hint:{}, solved:{}, twin:{}, bas:{}, err:{}, rule:{}}; }
 let REC=emptyRec();
-let UI={view:'list', pid:null, causeFor:null, showHints:{}, twinPick:{}, bt:null, BS:null};
+let UI={view:'list', pid:null, causeFor:null, showHints:{}, twinPick:{}, bt:null, BS:null, cover:{}, MX:null};
 /* 이름 정리: 띄어쓰기·'번'·앞자리 0을 통일 → '7 김민준' (같은 학생이 다르게 써서 기록이 나뉘지 않게) */
 function normName(s){ s=String(s||'').replace(/\s+/g,''); const m=s.match(/^0*(\d+)번?[.,·:)\-_]*(.+)$/); if(m) s=(+m[1])+' '+m[2]; return s.slice(0,12); }
 function nameOk(s){ return /^\d{1,2} [^\d\s][^\s]{0,9}$/.test(s); }
@@ -249,6 +256,7 @@ function render(){
   if(UI.view==='prob') v.innerHTML=viewProb(PBY[UI.pid]);
   else if(UI.view==='bas') v.innerHTML=viewBas();
   else if(UI.view==='bt') v.innerHTML=viewBT();
+  else if(UI.view==='mix') v.innerHTML=viewMix();
   else v.innerHTML=viewList();
   const inp=v.querySelector('input.ans'); if(inp){ inp.focus({preventScroll:true}); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') basSubmitNum(); }); }
   reportLoc(); tick();
@@ -262,6 +270,7 @@ function locText(){
     return p.no+' 해결';
   }
   if(UI.view==='bt') return '기초 '+UI.bt;
+  if(UI.view==='mix') return '섞어 풀기';
   if(UI.view==='bas') return '기초 연습 고르는 중';
   return '문제 목록';
 }
@@ -287,7 +296,9 @@ function nextProb(){
 }
 function viewList(){
   const done=P.filter(isDone).length, nx=nextProb(), pct=Math.round(done/P.length*100);
-  let h=`<div class="phase-h">문제 목록</div><div class="phase-d">풀고 싶은 문제를 골라요. 문제마다 <b>① 채점 → ② 다시 풀기${TW.length?' → ③ 확인 문제':''}</b> 순서로 진행해요.</div>`;
+  let h=`<div class="phase-h">문제 목록</div><div class="phase-d">풀고 싶은 문제를 골라요. 문제마다 <b>${CFG.lesson==='first'?'① 도전':'① 채점'} → ② 다시 풀기${TW.length?' → ③ 확인 문제':''}</b> 순서로 진행해요.</div>`;
+  if(CFG.mix && !(REC.mix&&REC.mix.at===CFG.mix&&REC.mix.done)) h+=`<div class="cheer" style="background:#efe7fb;border-color:#b89ad8">🔀 <b>섞어 풀기</b>가 열렸어요! 오늘 배운 생각을 섞어서 4문제 풀어요. <button class="acc" style="margin-left:8px" onclick="go('mix')">${REC.mix&&REC.mix.at===CFG.mix?'이어서 풀기':'시작하기'}</button></div>`;
+  if(CFG.lesson==='first') h+=`<div class="cheer" style="background:#eef5ff;border-color:#9cc0ef">🆕 <b>처음 배우는 문제들이에요.</b> 문제마다 종이에 <b>🎯 구할 것 · 📌 아는 것</b>부터 적고 풀어 보세요. 개념이 낯설면 ${BT.length?'<b>🧱 기초 연습</b>으로 먼저 몸풀기를 해도 좋아요.':'선생님께 물어보세요.'}</div>`;
   h+=`<div class="prog"><div class="pl"><b>완성 ${done} / ${P.length}</b><span class="muted">${TW.length?'확인 문제까지 맞히면 완성이에요':'해결하면 완성이에요'}</span></div><div class="pb"><div style="width:${pct}%"></div></div></div>`;
   if(done===P.length) h+=`<div class="cheer">🎉 모든 문제를 완성했어요! 아래 <b>나의 돌아보기</b>를 읽고, 시간이 남으면 ${BT.length?'기초 연습에서 ⭐를 모아 보거나 ':''}친구를 도와주세요.</div>`;
   h+=`<div class="plist">`;
@@ -314,6 +325,9 @@ function reflectHTML(){
   let h=`<div class="refl"><div class="rh">🪞 나의 돌아보기</div><div class="rl">처음부터 맞힌 문제 <b>${first}</b>개 · 다시 풀어 해결한 문제 <b>${fixed}</b>개${TW.length?` · 확인 문제 ⭕ <b>${TW.filter(t=>{const x=REC.twin[t.id]; return x&&x.a===t.ok;}).length}</b>개`:''}${stars.length?` · 기초 ⭐ <b>${stars.length}</b>개`:''}</div>`;
   if(top.length) h+=`<div class="rl">내가 고른 막힌 이유: ${top.map(([k,v])=>`${(CAUSE.find(c=>c.k===k)||{}).short||k} <b>${v}</b>`).join(' · ')}</div><div class="rt">${tips[top[0][0]]||''}</div>`;
   const spec=[...new Set(mine)].filter(k=>CBY[k]&&CBY[k].cat).map(k=>CBY[k].short); if(spec.length) h+=`<div class="rl">자세히: ${spec.join(' · ')}</div>`;
+  const over=TW.filter(t=>{ const x=REC.twin[t.id]; return x&&x.a!=null&&x.a!==t.ok&&REC.diag[t.of]==='o'; });
+  if(over.length) h+=`<div class="rl">🤔 ○로 채점했지만 확인 문제가 달랐던 문제 <b>${over.length}</b>개: ${over.map(t=>PBY[t.of].no).join(' ')} · 채점할 때 '왜 맞았는지' 설명할 수 있는지 따져 봐요.</div>`;
+  const rk=Object.keys(REC.rule||{}).filter(k=>PBY[k]); if(rk.length) h+=`<div class="rl">💡 핵심 생각 찾기 <b>${rk.filter(k=>REC.rule[k].ok).length}</b> / ${rk.length}</div>`;
   if(wrong.length) h+=`<div class="rl">확인 문제를 틀린 문제 ${wrong.map(t=>`<button class="ghost mini" onclick="go('prob','${t.of}')">${PBY[t.of].no} 다시 보기</button>`).join(' ')}</div>`;
   return h+`</div>`;
 }
@@ -323,15 +337,18 @@ function viewProb(p){
   const s=stOf(p);
   const step= s.twinPending||s.twinDone ? 3 : (!s.d ? 1 : (s.canTwin ? 3 : 2));
   let h=`<div class="phead"><span class="no">${p.no}</span><span class="tt">${p.title}</span><button class="ghost mini" onclick="go('list')">← 목록</button></div>
-    <div class="flow">${['① 채점','② 다시 풀기','③ 확인 문제'].slice(0,s.tw?3:2).map((x,i)=>`<span class="${i+1===step?'cur':(i+1<step?'ok':'')}">${x}</span>`).join('')}</div>`;
+    <div class="flow">${[CFG.lesson==='first'?'① 도전':'① 채점','② 다시 풀기','③ 확인 문제'].slice(0,s.tw?3:2).map((x,i)=>`<span class="${i+1===step?'cur':(i+1<step?'ok':'')}">${x}</span>`).join('')}</div>`;
   if(s.twinPending){
     return h+`<div class="card">${twinBlock(p,s)}<div class="lockmsg" style="margin-top:14px">📕 확인 문제를 내면 이 문제의 힌트·풀이가 다시 열려요.</div></div>`;
   }
   h+=`<div class="card">${probBox(p)}`;
   /* ① 채점 */
-  h+=`<div class="sec"><div class="sec-h">① 채점</div>`;
+  const first=CFG.lesson==='first';
+  h+=`<div class="sec"><div class="sec-h">${first?'① 도전':'① 채점'}</div>`;
   if(!s.d){
-    if(!REC.seen[p.id]) h+=`<div class="muted" style="margin-bottom:8px">지난 시간에 푼 답을 떠올리고 정답을 확인해요.</div><button class="acc" onclick="seeAns('${p.id}')">정답 확인</button>`;
+    if(!REC.seen[p.id]) h+= first? `<div class="muted" style="margin-bottom:8px">처음 풀어 보는 문제예요. 종이에 <b>🎯 구할 것 · 📌 아는 것</b>부터 적고 끝까지 풀어 보세요.</div>
+        <div class="btns"><button class="acc" onclick="seeAns('${p.id}')">다 풀었어요 → 정답 확인</button> <button class="ghost" onclick="stuckFirst('${p.id}')">막혔어요 → 힌트로</button></div>`
+      : `<div class="muted" style="margin-bottom:8px">지난 시간에 푼 답을 떠올리고 정답을 확인해요.</div><button class="acc" onclick="seeAns('${p.id}')">정답 확인</button>`;
     else h+=`<div class="ansline">정답: ${p.ans}</div><div class="muted" style="margin-bottom:8px">내 답과 비교해서 하나를 골라요. 솔직하게!</div>
       <div class="marks">${['o','t','x'].map(k=>`<button class="${k}" onclick="setDiag('${p.id}','${k}')"><b>${MK[k]}</b><span>${MKW[k]}</span></button>`).join('')}</div>`;
   } else {
@@ -343,11 +360,16 @@ function viewProb(p){
   if(s.d){
     h+=`<div class="sec"><div class="sec-h">② 다시 풀기</div>`;
     if(s.d!=='o' && !s.sv){
-      h+=`<div class="muted">힌트를 하나 열고 <b>종이에 다시 풀어 보세요.</b> 그래도 막히면 다음 힌트를 열어요.</div>`+hintSection(p,s);
+      if(!REC.err[p.id] && !s.lv && modeOf(p.id)!=='lock'){
+        h+=errPickHTML(p,s); h+=`</div></div>`; return h;
+      }
+      h+=`<div class="muted">힌트를 하나 열고 <b>종이에 다시 풀어 보세요.</b> 그래도 막히면 다음 힌트를 열어요.</div>`+errLine(p)+hintSection(p,s);
       if(UI.causeFor===p.id) h+=`<div style="margin-top:14px;font-weight:900">처음에 왜 막혔나요? (틀렸나요?)</div><div class="causes">${causesOf(p.id).map(c=>`<button onclick="solve('${p.id}','${c.k}')">${c.label}</button>`).join('')}</div>`;
-      else h+=`<div class="next"><button style="background:var(--o)" onclick="UI.causeFor='${p.id}';render();reveal('.causes')">✔ 이제 풀 수 있어요</button></div>`;
+      else if(UI.cover[p.id]===1) h+=`<div class="cover">📄 <b>풀이를 덮었어요.</b> 이제 풀이를 보지 않고 <b>종이에 처음부터 혼자</b> 다시 써 보세요.<div class="next"><button style="background:var(--o)" onclick="UI.cover['${p.id}']=2;UI.causeFor='${p.id}';render();reveal('.causes')">✔ 혼자 다 썼어요</button> <button class="ghost mini" onclick="UI.cover['${p.id}']=0;render()">풀이 다시 보기</button></div></div>`;
+      else h+=`<div class="next"><button style="background:var(--o)" onclick="readyToSolve('${p.id}')">✔ 이제 풀 수 있어요</button></div>`;
       if(s.lv>=s.n) h+=basicSuggest(p,'힌트를 다 봐도 어렵다면, 기초부터 다져 볼까요?');
     } else {
+      if(!s.tw && (s.sv||s.d==='o')) h+=rulePickHTML(p);
       h+= s.sv? `<span class="done">✔ 해결했어요</span>${!s.tr.open?` <button class="ghost mini" onclick="unsolve('${p.id}')">취소</button>`:''}` : `<span class="muted">처음부터 맞힌 문제예요.${s.tw?' 바로 확인 문제로 가도 돼요.':''}</span>`;
       h+=`<div style="margin-top:8px"><button class="ghost mini" onclick="UI.showHints['${p.id}']=!UI.showHints['${p.id}'];render()">${UI.showHints[p.id]?'힌트 접기':'힌트·풀이 다시 보기'}</button></div>`;
       if(UI.showHints[p.id]) h+=hintSection(p,s);
@@ -366,6 +388,7 @@ function viewProb(p){
 /* 새로 열린 내용이 화면 아래에 숨지 않게 그 자리로 부드럽게 옮김 */
 function reveal(sel){ requestAnimationFrame(()=>{ const els=document.querySelectorAll('#view '+sel), el=els[els.length-1]; if(!el) return;
   const r=el.getBoundingClientRect(); if(r.top<70||r.bottom>innerHeight-20) el.scrollIntoView({behavior:'smooth',block:r.height>innerHeight*0.6?'start':'center'}); }); }
+function stuckFirst(pid){ REC.seen[pid]=true; REC.diag[pid]='t'; saveRec(); send({t:'diag',pid,v:'t'}); render(); reveal('.errpick'); }
 function seeAns(pid){ REC.seen[pid]=true; saveRec(); send({t:'seen',pid}); render(); reveal('.marks'); }
 function setDiag(pid,k){ if(k) REC.diag[pid]=k; else delete REC.diag[pid]; saveRec(); send({t:'diag',pid,v:k||null}); render(); }
 function hintSection(p,s){
@@ -373,7 +396,7 @@ function hintSection(p,s){
   if(md==='lock') return `<div class="lockmsg">🔒 선생님이 이 문제의 힌트를 잠갔어요. 함께 볼 거예요. 그동안 혼자 도전해 봐요!</div>`;
   const solShown=REC.hint[p.id]&&REC.hint[p.id].sol;
   for(let i=0;i<lv&&i<n;i++) h+=`<div class="hcard"><div class="hl">힌트 ${i+1} / ${n}</div>${p.hints[i]}${hintCheckHTML(p,i,i===lv-1&&!solShown)}</div>`;
-  if(solShown && md==='all') h+=`<div class="hcard sol"><div class="hl">풀이</div>${p.sol}<div class="rule">💡 ${p.rule}</div></div>`;
+  if(solShown && md==='all' && UI.cover[p.id]!==1) h+=`<div class="hcard sol"><div class="hl">풀이</div>${p.sol}<div class="rule">💡 ${p.rule}</div></div>`;
   const left=waitLeft(p.id), ask=lv>0&&ckOf(p,lv-1)&&!hintOk(p.id,lv-1);
   const wmsg=ask?`위 질문의 답을 맞히면 바로 열려요 · 아니면 ${left}초 뒤에 열 수 있어요`:`종이에 다시 풀어 보세요 · ${left}초 뒤에 열 수 있어요`;
   if(lv<n) h+=`<div class="next"><button class="acc" id="nextBtn" ${left?'disabled':''} onclick="openHint('${p.id}')">힌트 ${lv+1} 보기</button><span class="cd" id="cd">${left?wmsg:''}</span></div>`;
@@ -417,6 +440,23 @@ function openHint(pid){ const p=PBY[pid]; if(modeOf(pid)==='lock'||waitLeft(pid)
   const lv=Math.min(p.hints.length,hintLv(pid)+1); REC.hint[pid]=Object.assign({},REC.hint[pid],{lv,t:Date.now()}); saveRec(); send({t:'hint',pid,lv}); render(); reveal('.hcard'); }
 function openSol(pid){ if(modeOf(pid)!=='all'||waitLeft(pid)) return;
   REC.hint[pid]=Object.assign({},REC.hint[pid],{sol:true}); saveRec(); send({t:'hint',pid,lv:hintLv(pid),sol:true}); render(); reveal('.hcard.sol'); }
+/* 풀이를 본 학생은 풀이를 덮고 혼자 다시 써 본 뒤에 '해결' */
+function readyToSolve(pid){ const solShown=REC.hint[pid]&&REC.hint[pid].sol; if(solShown&&UI.cover[pid]!==2){ UI.cover[pid]=1; render(); reveal('.cover'); return; } UI.causeFor=pid; render(); reveal('.causes'); }
+/* 틀리거나 막힌 학생: 힌트 전에 '어디서부터 달라졌나 / 어디서 막혔나'를 스스로 찾기 */
+function errPickHTML(p,s){
+  const q= s.d==='x'? '힌트를 보기 전에 <b>내 풀이</b>를 다시 봐요. 어디서부터 정답과 달라졌나요?' : '힌트를 보기 전에, 어디에서 막혔는지 골라 봐요.';
+  return `<div class="errpick"><div style="font-weight:900;margin-bottom:6px">🔎 ${q}</div><div class="causes">${causesOf(p.id).map(c=>`<button onclick="pickErr('${p.id}','${c.k}')">${c.label}</button>`).join('')}</div>
+    <div class="muted" style="margin-top:6px;font-size:14px">고른 곳에 맞는 힌트부터 볼 수 있어요.</div></div>`;
+}
+function errLine(p){ const k=REC.err[p.id]; if(!k) return ''; const c=CBY[k]; return c?`<div class="muted" style="margin-top:4px;font-size:14px">🔎 내가 찾은 곳: <b>${c.label}</b></div>`:''; }
+function pickErr(pid,k){
+  const p=PBY[pid], c=CBY[k]||{}, h=Math.max(0,Math.min(p.hints.length-1,+c.h||0));
+  REC.err=Object.assign({},REC.err,{[pid]:k});
+  if(h>hintLv(pid)){ REC.hint[pid]=Object.assign({},REC.hint[pid],{lv:h,t:0}); }
+  saveRec(); send({t:'err',pid,k}); render();
+  toast(h? `앞의 힌트 ${h}개는 이미 아는 내용이라 열어 두었어요. 힌트 ${h+1}부터 봐요` : '좋아요. 힌트 1부터 차근차근 봐요');
+  reveal(h?'.next':'.sec');
+}
 function solve(pid,cause){ REC.solved[pid]={lv:hintLv(pid),cause,sol:!!(REC.hint[pid]&&REC.hint[pid].sol)}; UI.causeFor=null; saveRec(); send({t:'solved',pid,on:true,cause}); render(); toast('좋아요! 이제 확인 문제로 실력을 확인해요'); }
 function unsolve(pid){ delete REC.solved[pid]; saveRec(); send({t:'solved',pid,on:false}); render(); }
 function basicSuggest(p,msg){
@@ -428,12 +468,17 @@ function basicSuggest(p,msg){
 function askTwin(pid){ $('askOv').classList.add('on'); $('askGo').onclick=()=>{ $('askOv').classList.remove('on'); const tw=TOF[pid]; REC.twin[tw.id]=Object.assign({},REC.twin[tw.id],{open:true}); saveRec(); send({t:'twinOpen',tid:tw.id}); render(); }; }
 function twinBlock(p,s){
   const t=s.tw, tr=s.tr, done=tr.a!=null, f=t.fig?t.fig():'', pick=UI.twinPick[t.id];
-  let h=`<div class="twbox"><div class="pbox ${f?'':'nofig'}"><div class="ptext">${t.text}</div>${f?`<div class="figw">${f}</div>`:''}</div>
-    <div class="chs">${t.ch.map((c,i)=>{ let cls=''; if(done){ if(i===t.ok) cls='right'; else if(i===tr.a) cls='wrong'; } else if(i===pick) cls='sel';
+  let h=`<div class="twbox"><div class="pbox ${f?'':'nofig'}"><div class="ptext">${t.text}</div>${f?`<div class="figw">${f}</div>`:''}</div>`;
+  if(t.inp) h+=twinInputHTML(t,tr);
+  else h+=`<div class="chs">${t.ch.map((c,i)=>{ let cls=''; if(done){ if(i===t.ok) cls='right'; else if(i===tr.a) cls='wrong'; } else if(i===pick) cls='sel';
       return `<button class="${cls}" ${done?'disabled style="opacity:1"':''} onclick="UI.twinPick['${t.id}']=${i};render()"><span class="n">${NUM[i]}</span>${c}</button>`; }).join('')}</div>`;
-  if(!done) h+=`<div class="next"><button class="acc" ${pick==null?'disabled':''} onclick="submitTwin('${t.id}')">제출 (한 번만)</button><span class="cd">종이에 풀고 답을 골라요</span></div>`;
+  if(!done) h+= t.inp? `<div class="next"><button class="acc" onclick="submitTwinNum('${t.id}')">제출 (한 번만)</button><span class="cd">종이에 풀고 답을 적어요 · π는 π 또는 파이, 분수는 56/3π처럼</span></div>`
+    : `<div class="next"><button class="acc" ${pick==null?'disabled':''} onclick="submitTwin('${t.id}')">제출 (한 번만)</button><span class="cd">종이에 풀고 답을 골라요</span></div>`;
   else {
     h+= tr.a===t.ok? `<div class="verdict r">⭕ 정답이에요! 이 문제는 완성!</div>` : `<div class="verdict w">❌ 아쉬워요</div>`;
+    if(t.inp) h+=`<div class="muted" style="font-weight:700">내 답: ${esc((tr.v||[]).join(t.ratio?' : ':', '))} · 정답: ${t.ch[t.ok]}</div>`;
+    if(tr.a!==t.ok && REC.diag[p.id]==='o') h+=`<div class="over">🤔 처음엔 <b>○(맞았어요)</b>로 채점했는데 이번엔 달랐어요. 처음 답이 정말 이해해서 맞힌 것이었는지 한 번 더 따져 봐요.</div>`;
+    h+=rulePickHTML(p);
     h+=`<div class="exp">${t.exp}</div>`;
     if(tr.a!==t.ok){
       if(!tr.cause) h+=`<div style="margin-top:12px;font-weight:900">무엇을 놓쳤나요?</div><div class="causes">${causesOf(t.of).map(c=>`<button onclick="twinCause('${t.id}','${c.k}')">${c.label}</button>`).join('')}</div>`;
@@ -443,6 +488,33 @@ function twinBlock(p,s){
   }
   return h+`</div>`;
 }
+/* 확인 문제 답 입력: 적은 값이 어느 보기와 같은지로 실수를 알아냄 (어느 것도 아니면 '기타' = 보기 수) */
+function piVal(v){ let t=String(v).replace(/파이|pi/gi,'π').replace(/cm²|cm|°|㎠|[\s()]/g,'').replace(/[－−]/g,'-').replace(/,/g,'');
+  if(!t) return null; const terms=t.match(/[+-]?[^+-]+/g)||[]; let a=0,b=0;
+  for(const raw of terms){ let sg=1, x=raw; if(x[0]==='+') x=x.slice(1); else if(x[0]==='-'){ sg=-1; x=x.slice(1); }
+    if(x.includes('π')){ const c=x.replace('π',''); const n= c===''?1 : c.startsWith('/')? 1/(parseNum(c.slice(1))||NaN) : parseNum(c); if(n==null||!Number.isFinite(n)) return null; b+=sg*n; }
+    else { const n=parseNum(x); if(n==null) return null; a+=sg*n; } }
+  return [a,b]; }
+function sameVal(x,y){ return x&&y&&Math.abs(x[0]-y[0])<1e-6&&Math.abs(x[1]-y[1])<1e-6; }
+function twinMatch(t,vs){ const got=vs.map(piVal); if(got.some(g=>!g)) return null;
+  for(let i=0;i<t.vals.length;i++){ const w=t.vals[i].map(piVal);
+    if(t.ratio){ if(got[0][0]*w[1][0]===got[1][0]*w[0][0] && got[0][0]>0) return i; }
+    else if(w.every((x,j)=>sameVal(x,got[j]))) return i; }
+  return t.ch.length; }
+function twinInputHTML(t,tr){ if(tr.a!=null) return '';
+  return `<div class="numin" style="flex-wrap:wrap">${t.inp.map((c,j)=>`${c.l?`<span class="sfx">${c.l}</span>`:''}<input class="twin-in" type="text" autocomplete="off" style="width:${t.ratio?70:130}px"><span class="sfx">${c.u||''}</span>`).join('')}</div>`; }
+function submitTwinNum(tid){ const t=TBY[tid]; if(!t||(REC.twin[tid]&&REC.twin[tid].a!=null)) return;
+  const vs=[...document.querySelectorAll('#view input.twin-in')].map(x=>x.value.trim().slice(0,30)); if(vs.some(v=>!v)){ toast('빈칸을 모두 채워 주세요'); return; }
+  const a=twinMatch(t,vs); if(a==null){ toast('수와 π로만 적어 주세요. 예: 4π, 8π-16, 56/3π'); return; }
+  REC.twin[tid]=Object.assign({},REC.twin[tid],{a,v:vs,open:true}); saveRec(); send({t:'twinAns',tid,a}); render(); reveal('.verdict'); }
+/* 핵심 생각 고르기: 이 문제의 💡 규칙을 다른 문제의 규칙과 구별 */
+function ruleChoices(p){ const others=P.filter(q=>q.id!==p.id&&q.rule&&q.rule!==p.rule); const diff=others.filter(q=>q.group!==p.group), pool=(diff.length>=2?diff:others);
+  const i=P.indexOf(p), pick=[pool[i%pool.length],pool[(i+1)%pool.length]].filter(Boolean);
+  const arr=[p,...pick]; const order=[(i)%3,(i+1)%3,(i+2)%3]; return order.map(k=>arr[k]).filter(Boolean); }
+function rulePickHTML(p){ if(!p.rule) return ''; const r=REC.rule[p.id], ch=ruleChoices(p);
+  if(r) return `<div class="rulebox ${r.ok?'ok':''}">💡 이 문제의 핵심 생각: <b>${p.rule}</b>${r.ok?' ✔':' <span class="muted">(처음엔 다른 것을 골랐어요)</span>'}</div>`;
+  return `<div class="rulebox"><div style="font-weight:900;margin-bottom:6px">💡 이 문제의 핵심 생각은 무엇이었나요?</div><div class="causes">${ch.map(q=>`<button onclick="pickRule('${p.id}','${q.id}')">${q.rule}</button>`).join('')}</div></div>`; }
+function pickRule(pid,qid){ REC.rule=Object.assign({},REC.rule,{[pid]:{ok:pid===qid}}); saveRec(); send({t:'rule',pid}); render(); toast(pid===qid?'맞아요! 공책에도 적어 두세요':'아쉬워요. 맞는 핵심 생각을 확인해요'); }
 function submitTwin(tid){ const a=UI.twinPick[tid]; if(a==null||(REC.twin[tid]&&REC.twin[tid].a!=null)) return;
   REC.twin[tid]=Object.assign({},REC.twin[tid],{a,open:true}); saveRec(); send({t:'twinAns',tid,a}); render(); reveal('.verdict'); }
 function twinCause(tid,c){ REC.twin[tid]=Object.assign({},REC.twin[tid],{cause:c}); saveRec(); send({t:'twinCause',tid,cause:c}); render(); }
@@ -457,10 +529,19 @@ function viewBas(){
       <div class="s">${st.n?`푼 문제 ${st.n} · 맞힌 문제 ${st.ok}`:'아직 안 풀었어요'}${rec.includes(b.k)?' · <span style="color:#7a4fb5">추천</span>':''}</div></button>`; }
   return h+`</div><div style="margin-top:16px"><button class="ghost" onclick="go('list')">← 문제 목록으로 돌아가기</button></div>`;
 }
+/* 기초 연습 단계 덜어 주기 (0단계가 있는 유형만)
+   배우기(learn): 0단계 채점 + 1·2단계 → 익히기(practice): 0단계는 칠하기만(채점 없음) + 바로 답 → 스스로(free): 안내 없음, 형광펜을 스스로 켜는지 기록
+   단계를 모두 맞힌 문제가 2개 이어지면 한 칸 올라가고, 틀리면 배우기로 돌아가요 */
+function hasStep0(steps){ return steps.some(x=>x.kind==='mark'||x.kind==='label'); }
 function newBasic(){
-  const it=BG[UI.bt]();
-  UI.BS={it, mk:{}, tool:'want', tok:[], markMsg:'', mode:it.steps.length?'steps':'direct', si:0, tries:0, wrong:false, ws:0, done:false, msg:'', picked:null, rev:{}, stepVals:{}};
+  const it=BG[UI.bt](); if(it.s0) it.steps=[it.s0,...it.steps.slice(1)];
+  const st=bstat(UI.bt), staged=hasStep0(it.steps), stage=staged?(st.stage||'learn'):'learn', full=it.steps.slice();
+  const S={it, mk:{}, lb:{}, tool:'want', tok:[], markMsg:'', mode:it.steps.length?'steps':'direct', si:0, tries:0, wrong:false, ws:0, done:false, msg:'', picked:null, rev:{}, stepVals:{}, stage, staged, full:staged?full:null};
+  if(staged&&stage==='practice'){ it.steps=[Object.assign({},full[0],{nocheck:true})]; S.after='direct'; }
+  if(staged&&stage==='free'){ it.steps=[]; S.mode='direct'; S.free=true; }
+  UI.BS=S;
 }
+const STAGE_TXT={learn:'배우기 · 단계마다 확인해요', practice:'익히기 · 구할 것·아는 것만 표시하고 바로 풀어요', free:'스스로 · 안내 없이 풀어요'};
 function streakHTML(st){ const n=Math.min(st.streak,3); return `<span class="streak">연속 정답 ${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}${st.star?' <span class="stars">⭐</span>':''}</span>`; }
 function choiceBtns(chs,onPick,state){ // state: {done, ok, picked, wide, also}
   return `<div class="chs ${state.wide?'wide':''}">${chs.map((c,i)=>{ let cls=''; if(state.done){ if(i===state.ok) cls='right'; else if(i===state.picked) cls=(state.also&&state.also[i]!=null)?'right':'wrong'; }
@@ -468,11 +549,12 @@ function choiceBtns(chs,onPick,state){ // state: {done, ok, picked, wide, also}
 }
 function viewBT(){
   const b=BBY[UI.bt], S=UI.BS, it=S.it, st=bstat(UI.bt);
-  let h=`<div class="phead"><span class="tt" style="font-size:20px;color:var(--ink)">🧱 ${b.name}</span>${streakHTML(st)}<button class="ghost mini" onclick="go('bas')">← 유형 고르기</button></div>`;
+  let h=`<div class="phead"><span class="tt" style="font-size:20px;color:var(--ink)">🧱 ${b.name}</span>${S.staged?`<span class="stg ${S.stage}">${STAGE_TXT[S.stage]}</span>`:''}${streakHTML(st)}<button class="ghost mini" onclick="go('bas')">← 유형 고르기</button></div>`;
   h+=`<div class="card"><div class="pbox ${it.fig?'':'nofig'}"><div class="ptext ${markActive()?'marking':''}">${markText(it.text)}</div>${it.fig?`<div class="figw">${it.fig}</div>`:''}</div>`;
   if(it.kind==='mc'){
     h+=choiceBtns(it.choices,'basPickMC',{done:S.done,ok:it.ok,picked:S.picked,wide:it.wide,also:it.also});
   } else if(S.mode==='direct'){
+    if(S.free&&!S.done){ const x=S.full[0]; h+=`<div style="margin-top:10px"><button class="ghost mini" onclick="UI.BS.penOn=!UI.BS.penOn;render()">${S.penOn?'🖍 형광펜 끄기':'🖍 형광펜 켜기'}</button></div>`+(S.penOn?(x.kind==='label'?labelPanel(x,true):markPanel(x,true)):''); }
     h+= S.done? '' : `<div class="numin"><input class="ans" type="text" inputmode="decimal" autocomplete="off"><span class="sfx">${it.suffix}</span><button class="acc" onclick="basSubmitNum()">확인</button></div>`;
     if(S.msg) h+=`<div class="msg ${S.msgOk?'r':'w'}">${S.msg}</div>`;
   } else {
@@ -482,13 +564,14 @@ function viewBT(){
       const cur=(i===S.si && !S.done);
       let row=`<div class="st ${cur?'':(S.rev[i]?'rev':'ok')}"><div class="q">${x.tag?`[${x.tag}]`:`${i+1}단계.`} ${x.q}</div>`;
       if(cur){
-        if(x.kind==='mark') row+=markPanel(x);
+        if(x.kind==='mark') row+=markPanel(x,false);
+        else if(x.kind==='label') row+=labelPanel(x,false);
         else if(x.kind==='mc') row+=choiceBtns(x.choices,'basPickStep',{done:false,wide:x.wide});
         else if(x.kind==='nums') row+=`<div class="numin">${x.pre?`<span class="sfx">${x.pre}</span>`:''}${x.ans.map(()=>`<input class="ans" type="text" inputmode="decimal" autocomplete="off" style="width:70px">`).join(`<span class="sfx">${x.sep||','}</span>`)}<button class="acc" onclick="basSubmitNum()">확인</button></div>`;
         else row+=`<div class="numin"><input class="ans" type="text" inputmode="decimal" autocomplete="off"><span class="sfx">${x.suffix||''}</span><button class="acc" onclick="basSubmitNum()">확인</button></div>`;
-        if(S.tries) row+=`<div class="msg w">${x.kind==='mark'&&S.markMsg?S.markMsg+' ':''}다시 생각해 봐요. (한 번 더 틀리면 답을 알려 줄게요)</div>`;
+        if(S.tries) row+=`<div class="msg w">${(x.kind==='mark'||x.kind==='label')&&S.markMsg?S.markMsg+' ':''}다시 생각해 봐요. (한 번 더 틀리면 답을 알려 줄게요)</div>`;
       } else {
-        const v= x.kind==='mark'? markSummary() : x.kind==='mc'? x.choices[x.ok] : x.kind==='nums'? `${x.pre?x.pre+' ':''}${x.ans.join(` ${x.sep||','} `)}` : `${x.suffix==='배'&&x.ans<1&&x.ans>0?'1/'+Math.round(1/x.ans):x.ans} ${x.suffix||''}`;
+        const v= x.kind==='mark'? markSummary() : x.kind==='label'? labelSummary(x) : x.kind==='mc'? x.choices[x.ok] : x.kind==='nums'? `${x.pre?x.pre+' ':''}${x.ans.join(` ${x.sep||','} `)}` : `${x.suffix==='배'&&x.ans<1&&x.ans>0?'1/'+Math.round(1/x.ans):x.ans} ${x.suffix||''}`;
         row+=`<div class="msg ${S.rev[i]?'':'r'}">${S.rev[i]?'정답은 ':'✔ '}${v}</div>`;
       }
       return row+`</div>`; }).join('')}</div>`;
@@ -502,10 +585,10 @@ function viewBT(){
 }
 /* 학생이 쓴 답을 수로 읽기: 3, -2, 1.5, 3/2 를 받음 (π·단위·띄어쓰기는 지움). 수가 아니면 null */
 /* ---------- [0단계] 형광펜: 문제 문장에서 구할 것(빨강)·아는 것(파랑)을 칠하고 이름표 붙이기 ---------- */
-function markActive(){ const S=UI.BS; return !!(S&&!S.done&&S.mode==='steps'&&S.it.steps[S.si]&&S.it.steps[S.si].kind==='mark'); }
+function markActive(){ const S=UI.BS; if(!S||S.done) return false; if(S.free&&S.penOn&&S.mode==='direct') return S.full[0].kind==='mark'; return !!(S.mode==='steps'&&S.it.steps[S.si]&&S.it.steps[S.si].kind==='mark'); }
 /* 문제 글을 칠할 수 있는 덩어리로 나눔: 단원이 표시한 구절(data-r)은 통째로, 나머지는 띄어쓰기 단위 */
 function markText(html){
-  const S=UI.BS; if(!S||!S.it.steps.some(x=>x.kind==='mark')) return html;
+  const S=UI.BS; if(!S||!(S.it.steps.some(x=>x.kind==='mark')||(S.full&&S.full.some(x=>x.kind==='mark')))) return html;
   const box=document.createElement('div'); box.innerHTML=html; let i=0; const info=[]; const act=markActive();
   const tag=el=>{ const k=i++; el.classList.add('tk'); el.setAttribute('data-i',k); info[k]={r:el.dataset.r||'', c:el.dataset.c||'', v:el.dataset.v||'', t:el.textContent};
     const m=(S.mk||{})[k]; if(m) el.classList.add(m.r==='want'?'hw':'hk'); if(act) el.setAttribute('onclick',`markTap(${k})`); };
@@ -519,17 +602,31 @@ function markTap(k){ const S=UI.BS; if(!markActive()) return; S.mk=Object.assign
   if(m&&m.r===S.tool) delete S.mk[k]; else S.mk[k]={r:S.tool,c:m&&m.r===S.tool?m.c:null}; render(); }
 function markTool(t){ UI.BS.tool=t; render(); }
 function markName(k,c){ const S=UI.BS; if(!markActive()||!S.mk[k]) return; S.mk=Object.assign({},S.mk); S.mk[k]=Object.assign({},S.mk[k],{c}); render(); }
-function markPanel(x){
+function markPanel(x,free){
   const S=UI.BS, tok=S.tok||[], ks=Object.keys(S.mk||{}).map(Number).sort((a,b)=>a-b);
   const chip=(k)=>{ const m=S.mk[k]; return `<span class="chip ${m.r==='want'?'w':'k'}"><span class="tx">${esc((tok[k]||{}).t||'')}</span><span class="muted">→ 이건</span><span class="nm">${x.concepts.map(c=>`<button class="${m.c===c?'on':''}" onclick="markName(${k},'${c}')">${c}</button>`).join('')}</span></span>`; };
   const ws=ks.filter(k=>S.mk[k].r==='want'), kn=ks.filter(k=>S.mk[k].r==='know');
   return `<div class="pens"><button class="w ${S.tool==='want'?'on':''}" onclick="markTool('want')">🎯 구할 것 형광펜</button><button class="k ${S.tool==='know'?'on':''}" onclick="markTool('know')">📌 아는 것 형광펜</button></div>
     <div class="memo"><div class="row"><span class="lb">🎯 구할 것</span>${ws.length?ws.map(chip).join(''):'<span class="muted">문제에서 무엇을 구하라고 했는지 칠해 보세요</span>'}</div>
     <div class="row"><span class="lb">📌 아는 것</span>${kn.length?kn.map(chip).join(''):'<span class="muted">문제에서 알려 준 것을 모두 칠해 보세요</span>'}</div></div>
-    <div class="next"><button class="acc" onclick="markCheck()">다 칠했어요</button></div>`;
+    ${free?'':`<div class="next"><button class="acc" onclick="markCheck()">다 칠했어요</button>${x.nocheck?'<span class="cd">익히기 단계라 채점하지 않아요. 스스로 표시해 보세요</span>':''}</div>`}`;
 }
+/* 그림에만 수가 있는 문제의 0단계: 그림 속 수마다 이름표 */
+function labelPanel(x,free){ const S=UI.BS;
+  return `<div class="memo">${x.items.map((it,i)=>`<div class="row"><span class="chip ${it.r==='want'?'w':'k'}"><span class="tx">${it.r==='want'?'🎯':'📌'} ${esc(it.v)}</span><span class="muted">→ 이건</span><span class="nm">${x.concepts.map(c=>`<button class="${S.lb[i]===c?'on':''}" onclick="labelName(${i},'${c}')">${c}</button>`).join('')}</span></span></div>`).join('')}</div>
+    ${free?'':`<div class="next"><button class="acc" onclick="labelCheck()">이름표 다 붙였어요</button>${x.nocheck?'<span class="cd">익히기 단계라 채점하지 않아요</span>':''}</div>`}`; }
+function labelName(i,c){ const S=UI.BS; if(!S||S.done) return; S.lb=Object.assign({},S.lb,{[i]:c}); render(); }
+function labelCheck(){ const S=UI.BS, x=S.it.steps[S.si]; if(!x||x.kind!=='label') return;
+  if(x.items.some((it,i)=>!S.lb[i])){ toast('수마다 이름표를 붙여 주세요'); return; }
+  if(x.nocheck){ basStep(true); return; }
+  const ok=x.items.every((it,i)=>S.lb[i]===it.c); S.markMsg=ok?'':'이름표가 맞지 않은 수가 있어요. 그림에서 그 수가 어디에 붙어 있는지 봐요.';
+  if(!ok&&S.tries>=1){ const m={}; x.items.forEach((it,i)=>m[i]=it.c); S.lb=m; }
+  basStep(ok); }
+function labelSummary(x){ const S=UI.BS; const f=r=>x.items.map((it,i)=>it.r===r?`${S.lb[i]||it.c} ${it.v}`:null).filter(Boolean).join(', ');
+  return `🎯 구할 것: ${f('want')} · 📌 아는 것: ${f('know')}`; }
 function markCheck(){
-  const S=UI.BS, tok=S.tok||[], mk=S.mk||{}; let miss=0, extra=0, swap=0, name=0, unnamed=0;
+  const S=UI.BS, tok=S.tok||[], mk=S.mk||{}, cur=S.it.steps[S.si]||{};
+  if(cur.nocheck){ const rs=Object.values(mk).map(m=>m.r); if(!rs.includes('want')||!rs.includes('know')){ toast('구할 것과 아는 것을 하나 이상씩 칠해 주세요'); return; } basStep(true); return; } let miss=0, extra=0, swap=0, name=0, unnamed=0;
   tok.forEach((t,k)=>{ const m=mk[k];
     if(t.r){ if(!m) miss++; else if(m.r!==t.r) swap++; else if(!m.c) unnamed++; else if(m.c!==t.c) name++; }
     else if(m) extra++; });
@@ -559,7 +656,7 @@ function basSubmitNum(){
   if(parseNum(v)==null){ toast('숫자만 넣어 주세요. (π와 단위는 칸 옆에 있어요 · 분수는 3/2처럼)'); inp.select(); return; }
   if(S.mode==='direct'){
     if(numEq(v,S.it.ans)){ S.msg=''; basFinish(); }
-    else { S.wrong=true; S.ws=S.ws||-1; if(S.it.steps.length){ S.mode='steps'; S.si=0; S.tries=0; S.msg='아쉬워요. 단계로 나눠서 다시 풀어 봐요.'; } else { basFinish(); } render(); }
+    else { S.wrong=true; S.ws=S.ws||-1; if(S.full){ S.it.steps= S.free? S.full.slice() : S.full.slice(1); S.after=null; } if(S.it.steps.length){ S.mode='steps'; S.si=0; S.tries=0; S.msg='아쉬워요. 단계로 나눠서 다시 풀어 봐요.'; } else { basFinish(); } render(); }
     return;
   }
   basStep(numEq(v,S.it.steps[S.si].ans));
@@ -569,14 +666,47 @@ function basStep(ok){
   const S=UI.BS;
   if(ok){ S.si++; S.tries=0; }
   else { S.wrong=true; if(!S.ws||S.ws<0) S.ws=S.si+1; S.tries++; if(S.tries>=2){ S.rev[S.si]=true; S.si++; S.tries=0; } }
-  if(S.si>=S.it.steps.length) basFinish(); else render();
+  if(S.si>=S.it.steps.length){ if(S.after==='direct'){ S.after=null; S.mode='direct'; S.it.steps=[]; S.si=0; render(); return; } basFinish(); } else render();
 }
 function basFinish(){
   const S=UI.BS; S.done=true; const k=UI.bt, st=Object.assign({n:0,ok:0,streak:0,star:false,recent:[]},REC.bas[k]);
   st.n++; if(!S.wrong){ st.ok++; st.streak++; } else { st.streak=0; const w=S.ws>0?S.ws:0; st.ws=Object.assign({},st.ws); st.ws[w]=(st.ws[w]||0)+1; }
   if(st.streak>=3) st.star=true; st.recent=(st.recent||[]).concat([!S.wrong]).slice(-5);
+  if(S.staged){ const before=st.stage||'learn';
+    if(S.free){ st.freeN=(st.freeN||0)+1; if(Object.keys(S.mk||{}).length||Object.keys(S.lb||{}).length) st.selfN=(st.selfN||0)+1; }
+    if(!S.wrong){ st.clean=(st.clean||0)+1; if(before!=='free'&&st.clean>=2){ st.stage=before==='learn'?'practice':'free'; st.clean=0; } else st.stage=before; }
+    else { st.stage= before==='free'?'practice':'learn'; st.clean=0; } /* 틀리면 한 단계만 내려감 */
+    if(st.stage!==before) setTimeout(()=>toast(st.stage==='practice'?'익히기 단계로 올라갔어요! 이제 구할 것·아는 것만 표시하고 바로 풀어요':st.stage==='free'?'스스로 단계! 이제 안내가 없어요. 구할 것·아는 것은 스스로 챙겨요':'단계를 따라 다시 차근차근 풀어 봐요',3500),300); }
   REC.bas[k]=st; saveRec(); send({t:'bas',type:k,ok:!S.wrong,ws:S.ws>0?S.ws:0}); render();
 }
+
+/* ---------- 🔀 섞어 풀기 (수업 끝, 교사가 열면) ----------
+   여러 기초 유형을 섞어 4문제: 먼저 '쓸 핵심 생각'을 고르고, 그다음 답 (한 번씩) */
+function mixTypes(){ return BT.filter(b=>b.rule&&BG[b.k]); }
+function newMix(){ const ts=mixTypes(); if(!ts.length) return null; const seq=[]; let pool=[];
+  while(seq.length<4){ if(!pool.length) pool=ULIB.shuffle(ts.map(b=>b.k)); const k=pool.pop(); if(seq[seq.length-1]===k&&pool.length) { pool.unshift(k); continue; } seq.push(k); }
+  return {at:CFG.mix, i:0, qs:seq.map(k=>({k, it:BG[k](), rule:null, ans:null}))}; }
+function viewMix(){
+  if(!CFG.mix){ return `<div class="phase-h">🔀 섞어 풀기</div><div class="card"><div class="muted">선생님이 섞어 풀기를 닫았어요.</div><div class="next"><button class="acc" onclick="go('list')">문제 목록으로</button></div></div>`; }
+  if(!UI.MX||UI.MX.at!==CFG.mix) UI.MX=newMix(); const M=UI.MX; if(!M) return '';
+  const ts=mixTypes();
+  if(M.i>=M.qs.length){ const ok=M.qs.filter(q=>q.ans===true).length, rok=M.qs.filter(q=>q.rule===true).length;
+    return `<div class="phase-h">🔀 섞어 풀기 끝!</div><div class="card"><div class="verdict ${ok>=3?'r':'w'}">정답 ${ok} / ${M.qs.length} · 핵심 생각 고르기 ${rok} / ${M.qs.length}</div>
+      <div class="muted">문제를 보고 어떤 생각을 쓸지 고르는 힘이 진짜 실력이에요. 틀린 유형은 🧱 기초 연습에서 더 연습해요.</div>
+      <div class="next"><button class="acc" onclick="go('list')">문제 목록으로</button></div></div>`; }
+  const q=M.qs[M.i], it=q.it;
+  let h=`<div class="phead"><span class="tt" style="font-size:20px;color:var(--ink)">🔀 섞어 풀기 ${M.i+1} / ${M.qs.length}</span></div>
+    <div class="card"><div class="pbox ${it.fig?'':'nofig'}"><div class="ptext">${it.text.replace(/<span data-r[^>]*>|<\/span>/g,'')}</div>${it.fig?`<div class="figw">${it.fig}</div>`:''}</div>`;
+  if(q.rule==null) h+=`<div style="font-weight:900;margin-top:12px">💡 이 문제에 쓸 핵심 생각은?</div><div class="causes">${ts.map(b=>`<button onclick="mixRule('${b.k}')">${b.rule}</button>`).join('')}</div>`;
+  else { h+=`<div class="rulebox ${q.rule?'ok':''}">💡 쓸 생각: <b>${BBY[q.k].rule}</b>${q.rule?' ✔':' (다른 것을 골랐어요)'}</div>`;
+    h+=`<div class="numin"><input class="mix-in" type="text" inputmode="decimal" autocomplete="off" onkeydown="if(event.key==='Enter')mixAns()"><span class="sfx">${it.suffix||''}</span><button class="acc" onclick="mixAns()">확인 (한 번)</button></div>`; }
+  return h+`</div>`;
+}
+function mixRule(k){ const M=UI.MX, q=M.qs[M.i]; q.rule=(k===q.k); mixSave(); render(); }
+function mixAns(){ const M=UI.MX, q=M.qs[M.i], inp=document.querySelector('#view input.mix-in'); if(!inp) return; const v=inp.value.trim(); if(!v) return;
+  if(parseNum(v)==null){ toast('숫자만 넣어 주세요 (π와 단위는 칸 옆에)'); return; }
+  q.ans=numEq(v,q.it.ans); toast(q.ans?'⭕ 정답!':`❌ 정답은 ${q.it.ans}`); M.i++; mixSave(); render(); window.scrollTo(0,0); }
+function mixSave(){ const M=UI.MX; REC.mix={at:M.at, n:M.qs.filter(q=>q.ans!=null).length, ok:M.qs.filter(q=>q.ans===true).length, rok:M.qs.filter(q=>q.rule===true).length, done:M.i>=M.qs.length}; saveRec(); send({t:'mix'}); }
 
 /* 기다리는 시간 표시 (1초마다) */
 let tickH=null;
@@ -618,10 +748,12 @@ function mergeRec(a,b){
   for(const k in (b.hint||{})){ const x=r.hint[k]||{}, y=b.hint[k]||{}; r.hint[k]={lv:Math.max(x.lv||0,y.lv||0), sol:!!(x.sol||y.sol), t:x.t||0};
     const ha=Object.assign({},y.ha,x.ha); for(const q in ha){ const xa=(x.ha||{})[q], ya=(y.ha||{})[q]; if(xa&&ya) ha[q]=(ya.ok&&!xa.ok)||(ya.ok===xa.ok&&(ya.n||0)>(xa.n||0))?ya:xa; } if(Object.keys(ha).length) r.hint[k].ha=ha; }
   for(const k in (b.solved||{})) if(!r.solved[k]) r.solved[k]=b.solved[k];
-  for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null) x.a=y.a; if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
+  for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null){ x.a=y.a; if(y.v) x.v=y.v; } if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
   for(const k in (b.bas||{})){ const x=r.bas[k], y=b.bas[k]||{}; if(!x||(y.n||0)>(x.n||0)) r.bas[k]=y; }
   r.resetSeen=Math.max(r.resetSeen||0,b.resetSeen||0);
   r.mergedAt=Math.max(r.mergedAt||0,+b.mergedAt||0);
+  r.err=Object.assign({},b.err,r.err); r.rule=Object.assign({},b.rule,r.rule);
+  if(b.mix&&(!r.mix||(+b.mix.at||0)>(+r.mix.at||0)||((+b.mix.at||0)===(+r.mix.at||0)&&(+b.mix.n||0)>(+r.mix.n||0)))) r.mix=b.mix;
   return r;
 }
 function applyCfg(c){
@@ -629,7 +761,7 @@ function applyCfg(c){
   if(c.resetAt && c.resetAt>(REC.resetSeen||0)){   // 선생님이 기록을 초기화함
     REC=emptyRec(); REC.resetSeen=c.resetAt; saveRec(); upload(); toast('선생님이 기록을 새로 시작했어요');
   }
-  CFG={wait:Math.max(0,+c.wait||0), mode:c.mode||{}};
+  CFG={wait:Math.max(0,+c.wait||0), mode:c.mode||{}, lesson:c.lesson==='first'?'first':'review', mix:+c.mix||0};
   document.body.classList.toggle('fig-bold',c.fig==='bold');
   $('pauseOv').classList.toggle('on',!!c.paused); if(c.pauseMsg) $('pauseMsg').textContent=c.pauseMsg;
   const v=+c.ver||0; if(v&&v!==APP_VER&&CL.verWarn!==v){ CL.verWarn=v; const m=v>APP_VER?'⚠ 새 버전이 있어요. 이 화면을 새로고침해 주세요.':'⚠ 선생님 화면이 옛 버전이에요. 선생님께 새로고침을 부탁하세요.'; toast(m,6000); }
@@ -716,7 +848,7 @@ function authMsg(e){
 function startMirror(){
   addEventListener('message',e=>{
     if(e.origin!==location.origin||!e.data||e.data.type!=='mirror') return;
-    const d=e.data; REC=Object.assign(emptyRec(), d.rec||{}); CFG={wait:Math.max(0,+(d.cfg&&d.cfg.wait)||0), mode:(d.cfg&&d.cfg.mode)||{}}; document.body.classList.toggle('fig-bold',!!(d.cfg&&d.cfg.fig==='bold'));
+    const d=e.data; REC=Object.assign(emptyRec(), d.rec||{}); CFG={wait:Math.max(0,+(d.cfg&&d.cfg.wait)||0), mode:(d.cfg&&d.cfg.mode)||{}, lesson:d.cfg&&d.cfg.lesson==='first'?'first':'review', mix:+(d.cfg&&d.cfg.mix)||0}; document.body.classList.toggle('fig-bold',!!(d.cfg&&d.cfg.fig==='bold'));
     $('who').textContent='👤 '+d.name;
     if(d.loc!=null){   // 학생이 지금 있는 곳으로
       const p=P.find(x=>d.loc.startsWith(x.no)), b=(d.loc.match(/^기초 (\S+)$/)||[])[1];
