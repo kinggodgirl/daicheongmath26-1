@@ -241,7 +241,7 @@ const TWINS = [
 /* =========================================================
    기초 연습 (1쪽 왼쪽 기초 유형) — 문제는 매번 무작위로 만들어져요
    각 문제: {text, fig, kind:'mc'|'num', choices, ok, ans, suffix, steps:[{tag,q,kind,choices,ok,ans,suffix}], exp}
-   - 단계 kind: 'mc'(고르기) · 'num'(수 하나) · 'nums'(비처럼 수 여러 개: ans:[5,7], sep:':', pre:'50 : 70 =')
+   - 단계 kind: 'mark'(0단계 형광펜) · 'mc'(고르기) · 'num'(수 하나) · 'nums'(비처럼 수 여러 개: ans:[5,7], sep:':', pre:'50 : 70 =')
    - 'num' 답은 숫자만 입력 (π는 칸 옆에 미리 적혀 있음)
    - steps(0단계 구할 것·아는 것 → 1단계 → 2단계…)를 매번 한 칸씩 풀어요
 ========================================================= */
@@ -326,13 +326,12 @@ const A1_ITEMS=[
   ['한 원에서 <b>현의 길이</b>는 중심각의 크기에 □','정비례하지 않는다',['정비례한다','반비례한다']]
 ];
 let A1_LAST=-1, A2_LAST='';
-/* [0단계] 구해야 하는 것과 아는 것 적기 — 도형 문제는 여기서 시작 */
-const WANT=['호의 길이','부채꼴의 넓이','중심각의 크기','반지름의 길이'];
-function basicStep0(want,known,knownWrong){
-  const w=mc(want,WANT.filter(x=>x!==want)), k=mc(known,knownWrong);
-  return [{tag:'0단계', q:'무엇을 구해야 하나요?', kind:'mc', choices:w.choices, ok:w.ok},
-          {tag:'0단계', q:'문제에서 알고 있는 것은?', kind:'mc', choices:k.choices, ok:k.ok, wide:true}];
-}
+/* [0단계] 구해야 하는 것과 아는 것 — 문제 문장에 형광펜(구할 것 빨강, 아는 것 파랑)을 칠하고 개념 이름표를 붙여요
+   KN(개념, 값, 구절): 아는 것 · WN(개념, 구절): 구할 것. 구절 전체가 한 덩어리로 칠해져요(숫자만 칠할 수 없음) */
+const CONCEPTS=['중심각','호의 길이','반지름','넓이'];
+const KN=(c,v,t)=>`<span data-r="know" data-c="${c}" data-v="${v}">${t}</span>`;
+const WN=(c,t)=>`<span data-r="want" data-c="${c}">${t}</span>`;
+const STEP0={tag:'0단계', kind:'mark', concepts:CONCEPTS, q:'문제에서 <b style="color:#c0392b">구할 것</b>은 🎯빨강, <b style="color:#1f5fbf">아는 것</b>은 📌파랑으로 칠하고, 칠한 곳마다 무엇인지 이름표를 붙여요.'};
 const BASIC_GEN={
   A1(){
     let i; do{ i=ri(0,A1_ITEMS.length-1); }while(i===A1_LAST && A1_ITEMS.length>1); A1_LAST=i;
@@ -360,22 +359,21 @@ const BASIC_GEN={
       else { if(a%k) continue; b=a/k; if(b<20||a+b>300) continue; const m=ri(2,7); L=m*k; x=m; }
       break;
     }
-    const u=area?'cm²':'cm', what=area?'넓이':'호의 길이', whatF=area?'부채꼴의 넓이':'호의 길이';
-    const s0=basicStep0(whatF, `중심각 2개, ${what} 1개`, [`중심각 1개, ${what} 2개`,`반지름 1개, 중심각 1개`,`중심각 2개, 반지름 1개`]);
+    const u=area?'cm²':'cm', what=area?'넓이':'호의 길이';
     let s1,s2,exp;
     if(hard){
       s1={tag:'1단계', q:`중심각끼리 비교해요. 비로 나타내면? (가장 간단한 자연수의 비)`, kind:'nums', pre:`${a} : ${b} =`, ans:[p,q], sep:':'};
       s2={tag:'2단계', q:`${what}끼리 비교해요. ${what}의 비도 ${p} : ${q}예요. ${p} : ${q} = ${L} : <i class="mv">x</i> 이면 <i class="mv">x</i>는?`, kind:'num', ans:x, suffix:u};
-      exp=`[0단계] 구할 것: ${whatF} · 아는 것: 중심각 2개, ${what} 1개<br>[1단계] 중심각의 비 ${a} : ${b} = ${p} : ${q}<br>[2단계] ${what}의 비도 ${p} : ${q} → ${p} : ${q} = ${L} : <i class="mv">x</i>, <i class="mv">x</i> = <b>${x} ${u}</b>`;
+      exp=`[0단계] 🎯 구할 것: ${what} · 📌 아는 것: 중심각 ${a}°, ${what} ${L} ${u}, 중심각 ${b}°<br>[1단계] 중심각의 비 ${a} : ${b} = ${p} : ${q}<br>[2단계] ${what}의 비도 ${p} : ${q} → ${p} : ${q} = ${L} : <i class="mv">x</i>, <i class="mv">x</i> = <b>${x} ${u}</b>`;
     } else {
       const kTxt= up? `${k}` : FR(1,k);
       s1={tag:'1단계', q:`중심각끼리 비교해요. ${b}°는 ${a}°의 몇 배인가요? (${b} = ${a} × □)`, kind:'num', ans:up?k:1/k, suffix:'배'};
       s2={tag:'2단계', q:`${what}끼리 비교해요. ${what}도 중심각과 <b>같은 배</b>가 돼요. ${L} × ${kTxt} = ?`, kind:'num', ans:x, suffix:u};
-      exp=`[0단계] 구할 것: ${whatF} · 아는 것: 중심각 2개, ${what} 1개<br>[1단계] ${b} = ${a} × ${kTxt}<br>[2단계] ${what}도 ${kTxt}배 → ${L} × ${kTxt} = <b>${x} ${u}</b>`;
+      exp=`[0단계] 🎯 구할 것: ${what} · 📌 아는 것: 중심각 ${a}°, ${what} ${L} ${u}, 중심각 ${b}°<br>[1단계] ${b} = ${a} × ${kTxt}<br>[2단계] ${what}도 ${kTxt}배 → ${L} × ${kTxt} = <b>${x} ${u}</b>`;
     }
-    return {text:`한 원에서 중심각의 크기가 ${a}°인 부채꼴의 ${what}가 ${L} ${u}일 때, 중심각의 크기가 ${b}°인 부채꼴의 ${what}를 구하시오.`,
+    return {text:`한 원에서 ${KN('중심각',a+'°',`중심각의 크기가 ${a}°`)}인 부채꼴의 ${KN(what,L+' '+u,`${what}가 ${L} ${u}`)}일 때, ${KN('중심각',b+'°',`중심각의 크기가 ${b}°`)}인 부채꼴의 ${WN(what,`${what}를 구하시오`)}.`,
       fig:twoSectorFig(a,b,`${L} ${u}`,`${XI} ${u}`,area), kind:'num', ans:x, suffix:u,
-      steps:[...s0, s1, s2], exp};
+      steps:[STEP0, s1, s2], exp};
   },
   C(){
     const area=Math.random()<0.5;
@@ -387,11 +385,11 @@ const BASIC_GEN={
     const cand=[]; if(th<180) cand.push(fracH(th,180)); cand.push(fracH(360-th,360)); if(th<=100) cand.push(fracH(th,100));
     for(const [n,d] of shuffle([[1,2],[1,3],[1,4],[2,3],[3,4],[1,6],[5,6],[3,8],[5,8],[5,12],[1,5],[2,5]])) cand.push(fracH(n,d));
     const fr=mc(fOk,[...new Set(cand)].filter(c=>c!==fOk).slice(0,3));
-    return {text:`반지름의 길이가 ${r} cm이고 중심각의 크기가 ${th}°인 부채꼴의 <b>${what}</b>를 구하시오.`,
+    return {text:`${KN('반지름',r+' cm',`반지름의 길이가 ${r} cm`)}이고 ${KN('중심각',th+'°',`중심각의 크기가 ${th}°`)}인 부채꼴의 ${WN(area?'넓이':'호의 길이',`${what}를 구하시오`)}.`,
       fig:sectorFig({theta:th, mid:th>180?270:rnd([90,90,60,120]), rLabel:`${r} cm`, angLabel:`${th}°`, shade:area, arcLabel:area?null:'? cm', inLabel:null}),
       kind:'num', ans:coef, suffix:`${PI} ${u}`,
       steps:[
-        ...basicStep0(area?'부채꼴의 넓이':'호의 길이','반지름, 중심각',['반지름, 호의 길이','중심각 2개, 호의 길이 1개','반지름, 넓이']),
+        STEP0,
         {tag:'1단계', q:`반지름이 ${r} cm인 <b>원</b>의 ${circ}는?`, kind:'num', ans:full, suffix:`${PI} ${u}`},
         {tag:'2단계', q:`중심각 ${th}°인 부채꼴은 원의 몇 분의 몇 조각인가요? (${th}/360을 약분)`, kind:'mc', choices:fr.choices, ok:fr.ok},
         {tag:'3단계', q:`${full}${PI} × ${fOk} = ?`, kind:'num', ans:coef, suffix:`${PI} ${u}`}
@@ -403,11 +401,11 @@ const BASIC_GEN={
     for(;;){ r=ri(3,12); k=ri(2,12); th=180*k/r; if((k*r)%2===0 && th>=30 && th<=300) break; }
     const S=k*r/2;
     const f=mc('½ × (호의 길이) × (반지름)',['(호의 길이) × (반지름)','½ × (반지름) × (반지름)','2 × (호의 길이) × (반지름)']);
-    return {text:`반지름의 길이가 ${r} cm이고 호의 길이가 ${k}${PI} cm인 부채꼴의 <b>넓이</b>를 구하시오.`,
+    return {text:`${KN('반지름',r+' cm',`반지름의 길이가 ${r} cm`)}이고 ${KN('호의 길이',k+'π cm',`호의 길이가 ${k}${PI} cm`)}인 부채꼴의 ${WN('넓이','넓이를 구하시오')}.`,
       fig:sectorFig({theta:th, mid:th>180?270:90, rLabel:`${r} cm`, shade:true, arcLabel:`${k}${PI} cm`}),
       kind:'num', ans:S, suffix:`${PI} cm²`,
       steps:[
-        ...basicStep0('부채꼴의 넓이','반지름, 호의 길이',['반지름, 중심각','중심각, 호의 길이','반지름, 넓이']),
+        STEP0,
         {tag:'1단계', q:'중심각을 모를 때 부채꼴의 넓이를 구하는 공식은? (삼각형 넓이 공식과 닮았어요)', kind:'mc', choices:f.choices.map(c=>c.replace('½',FR(1,2))), ok:f.ok},
         {tag:'2단계', q:`${FR(1,2)} × ${k}${PI} × ${r} = ?`, kind:'num', ans:S, suffix:`${PI} cm²`}
       ],
@@ -417,9 +415,9 @@ const BASIC_GEN={
 const BASIC_TYPES=[
   {k:'A1', name:'개념 빈칸', desc:'원·호·현·부채꼴·활꼴의 뜻', steps:[]},
   {k:'A2', name:'그림 보고 이름 고르기', desc:'이건 호일까 현일까? 부채꼴일까 아닐까?', steps:[]},
-  {k:'B',  name:'중심각과 호의 길이', desc:'중심각이 2배면 호의 길이도 2배', steps:['0단계 구할 것','0단계 아는 것','1단계 중심각 비교','2단계 호의 길이·넓이 비교']},
-  {k:'C',  name:'[반지름, 중심각] → 호의 길이·넓이', desc:'원의 몇 분의 몇 조각인지 구하기', steps:['0단계 구할 것','0단계 아는 것','1단계 원의 둘레·넓이','2단계 몇 분의 몇','3단계 답']},
-  {k:'D',  name:'[반지름, 호의 길이] → 넓이', desc:'½ × 호의 길이 × 반지름', steps:['0단계 구할 것','0단계 아는 것','1단계 공식','2단계 답']}
+  {k:'B',  name:'중심각과 호의 길이', desc:'중심각이 2배면 호의 길이도 2배', steps:['0단계 구할 것·아는 것','1단계 중심각 비교','2단계 호의 길이·넓이 비교']},
+  {k:'C',  name:'[반지름, 중심각] → 호의 길이·넓이', desc:'원의 몇 분의 몇 조각인지 구하기', steps:['0단계 구할 것·아는 것','1단계 원의 둘레·넓이','2단계 몇 분의 몇','3단계 답']},
+  {k:'D',  name:'[반지름, 호의 길이] → 넓이', desc:'½ × 호의 길이 × 반지름', steps:['0단계 구할 것·아는 것','1단계 공식','2단계 답']}
 ];
 /* 각 문제에서 막혔을 때 권할 기초 유형 */
 const BASIC_FOR={p1:['B','C'], p2:['C','A1'], p3:['A2','B'], p4:['C','D'], p5:['A2','B'], p6:['C','A2'], p7:['C','D']};
