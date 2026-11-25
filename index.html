@@ -7,6 +7,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script src="vendor/katex/katex.min.js"></script>
+<script src="vendor/mathlive/mathlive.min.js"></script>
+<script src="vendor/lottie/lottie_light.min.js"></script>
+<script src="anim/star.js"></script>
+<script>/* MathLive 수식 입력 칸: 소리 끄고, 글꼴은 KaTeX 것을 같이 씀(common.css --ML__static-fonts), 패드 키보드는 숫자·π·분수 */
+try{ MathfieldElement.soundsDirectory=null; mathVirtualKeyboard.layouts=[{label:'수', rows:[
+    ['7','8','9',{latex:'\\frac{#@}{#?}',label:'<b style="font-size:17px">분수</b>'},'[backspace]'],
+    ['4','5','6',{latex:'\\pi',label:'π'},{latex:'-',label:'−'}],
+    ['1','2','3','+',':'],
+    ['[left]','0','.','[right]','[hide-keyboard]']]}]; }catch(e){}</script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -129,6 +140,9 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .vnew{animation:vin .9s ease both}
 @keyframes vin{from{opacity:0}to{opacity:1}}
 .vcap{font-size:22px;text-align:center;font-weight:700;margin:12px 0 10px;min-height:64px;line-height:1.5}
+.mf{display:inline-block;min-width:90px;font-size:22px;padding:4px 8px;border:2px solid var(--line);border-radius:10px;background:#fff;vertical-align:middle}
+.mf.bad{border-color:var(--x);background:#fff2f2}.mf.good{border-color:var(--o)}
+math-field::part(virtual-keyboard-toggle){color:#7a4fb5}
 .vbub{display:flex;gap:12px;align-items:flex-start;margin:4px auto 12px;max-width:720px;cursor:pointer}
 .vowl{font-size:46px;line-height:1;position:relative;text-align:center;animation:bob 1.6s ease-in-out infinite;flex:none}.vowl span{position:absolute;right:-10px;top:-8px;font-size:22px;animation:pop2 .5s both}.vowl em{display:block;font-style:normal;font-size:12px;font-weight:800;color:#8a6d3b;margin-top:2px}
 .vtxt{position:relative;flex:1;background:#fff;border:3px solid #ffd43b;border-radius:18px;padding:12px 16px;font-size:21px;font-weight:700;line-height:1.6;min-height:58px;box-shadow:0 4px 0 #ffe8a3}
@@ -153,6 +167,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .shelf{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:-4px 0 14px;font-weight:700}.shelf .bd{background:#fff;border:2px solid var(--line);border-radius:12px;padding:4px 10px;font-size:15px}.shelf .bd.no{opacity:.4}
 .celeb{position:fixed;inset:0;pointer-events:none;z-index:60;display:none}.celeb.on{display:block}
 .celeb .cbox{position:absolute;left:50%;top:22%;transform:translateX(-50%);background:#fff;border:3px solid #ffcf4a;border-radius:22px;padding:18px 28px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.18);animation:pop .45s cubic-bezier(.2,1.6,.4,1);max-width:90vw}
+.celeb .clot{display:none;width:250px;height:250px;margin:-150px auto -40px;position:relative;z-index:1}.celeb.lot .clot{display:block}.celeb.lot .cbox{padding-top:8px;top:30%}
 .celeb .cb{font-size:30px;font-weight:900}.celeb .cs{font-size:17px;margin-top:6px;color:#555}
 .celeb .conf i{position:absolute;top:-20px;width:10px;height:16px;border-radius:3px;animation:fall 2.4s linear forwards}
 @keyframes pop{from{transform:translateX(-50%) scale(.4);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
@@ -267,10 +282,10 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="overlay" id="askOv"><div class="box"><div style="font-size:40px">📕</div><h2 style="margin:6px 0 8px">확인 문제를 풀까요?</h2><p style="font-size:17px;line-height:1.7">학습지와 풀이를 덮고 <b>혼자</b> 풀어요.<br>답을 낼 때까지 이 문제의 <b>힌트·풀이가 닫히고</b>,<br>제출은 <b>한 번</b>만 할 수 있어요.</p>
   <div style="display:flex;gap:10px;margin-top:16px"><button class="ghost" style="flex:1" onclick="$('askOv').classList.remove('on')">아직이요</button><button class="acc" style="flex:1" id="askGo">풀게요</button></div></div></div>
 <div class="toast" id="toast"></div>
-<div class="celeb" id="celeb"><div class="cbox"><div class="cb"></div><div class="cs"></div></div><div class="conf"></div></div>
+<div class="celeb" id="celeb"><div class="cbox"><div class="clot" id="clot"></div><div class="cb"></div><div class="cs"></div></div><div class="conf"></div></div>
 
 <script>
-const APP_VER=20261125.11;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.12;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, TW2=U.twins2||[], CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen, BV=U.basicVideo||{};
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
@@ -329,6 +344,7 @@ function render(){
   $('navGame').classList.toggle('sel', UI.view==='game'); $('navPts').classList.toggle('sel', UI.view==='pts');
   $('navGame').classList.toggle('hide', !CFG.game); $('navBB').classList.toggle('hide', !((typeof bbOpen==='function'&&bbOpen())||(typeof BB!=='undefined'&&BB))||MIRROR); $('navBB').classList.toggle('sel', UI.view==='bb'); if(UI.view==='game'&&!CFG.game&&!UI.rolling) UI.view='list'; updPts();
   const v=$('view');
+  try{ const ae=document.activeElement; if(ae&&ae.tagName==='MATH-FIELD') ae.blur(); }catch(e){}   /* 수식 칸을 지우기 전에 포커스를 빼야 MathLive가 오류를 안 냄 */
   if(UI.view==='prob') v.innerHTML=viewProb(PBY[UI.pid]);
   else if(UI.view==='bas') v.innerHTML=viewBas();
   else if(UI.view==='bt') v.innerHTML=viewBT();
@@ -513,7 +529,7 @@ function hintOk(pid,i){ const a=hintAns(pid,i); return !!(a&&a.ok); }
 /* 정답을 보여 주기 전 기회: 숫자 칸은 2번, 보기 고르기만 있는 질문은 1번 (찍어서 맞히지 못하게) */
 function tryLim(ck){ return ck&&ck.every(c=>c.ch)?1:2; }
 function hintGate(pid,i){ const p=PBY[pid], ck=ckOf(p,i); if(!ck) return false; const a=hintAns(pid,i)||{}; return !a.ok&&!a.gave&&(a.n||0)<tryLim(ck); }
-function ckVal(c){ return c.ch? c.ch[c.a] : Number.isInteger(c.a)? c.a : fmtAns(c.a); }
+function ckVal(c){ if(c.ch) return c.ch[c.a]; if(Number.isInteger(c.a)) return c.a; const f=String(fmtAns(c.a)).split('/'); return f.length===2? ULIB.FR(f[0],f[1]) : f[0]; }
 function ckUnit(c){ return /^[°π]/.test(c.u||'')||!c.u?(c.u||''):' '+c.u; }
 function hintCheckHTML(p,i,active){
   const ck=ckOf(p,i); if(!ck) return '';
@@ -524,7 +540,7 @@ function hintCheckHTML(p,i,active){
   if(a&&a.gave) return `<div class="hdone" style="background:#f3f0ea;border-color:#cdbfa6;color:var(--ink)">🏳 포기했어요. 정답: ${ansTxt()} → 종이에 옮겨 쓰고, 왜 그런지 힌트를 다시 읽어 봐요.</div>`;
   if(!active) return '';
   const last=a&&Array.isArray(a.v)?a.v:[];
-  return `<div class="hchk" data-pid="${p.id}" data-i="${i}">${ck.map((c,j)=>c.ch?`<label>${c.l} <select class="hin"><option value="">고르기</option>${c.ch.map((o,k)=>`<option value="${k}">${o}</option>`).join('')}</select></label>`:`<label>${c.l} <input class="hin" autocomplete="off" placeholder="${c.ph||''}" value="${esc(String(last[j]??''))}" onkeydown="if(event.key==='Enter')checkHint('${p.id}',${i})"> ${c.u}</label>`).join('')}
+  return `<div class="hchk" data-pid="${p.id}" data-i="${i}">${ck.map((c,j)=>c.ch?`<label>${c.l} <select class="hin"><option value="">고르기</option>${c.ch.map((o,k)=>`<option value="${k}">${o}</option>`).join('')}</select></label>`:`<label>${c.l} ${mfHTML('hin',String(last[j]??''),c.ph,`checkHint('${p.id}',${i})`)} ${c.u}</label>`).join('')}
     <button class="acc" onclick="checkHint('${p.id}',${i})">답 확인</button>${CFG.lesson==='first'?`<button class="ghost" onclick="giveUpHint('${p.id}',${i})">🏳 포기</button>`:''}
     <div class="hm" id="hm">${a&&a.n?`아직 아니에요 (${a.n}번 시도). 힌트를 다시 읽고 종이에 써 보세요.`:(tryLim(ck)>1?'답을 적고 확인을 누르세요. 맞히면 다음 힌트를 바로 볼 수 있어요.':'잘 생각해서 하나만 골라요. 기회는 한 번이에요.')}</div></div>`;
 }
@@ -533,7 +549,7 @@ function hintNum(v){ return parseNum(String(v).replace(/파이|pi/gi,'')); }
 function checkHint(pid,i){
   if(MIRROR) return;
   const p=PBY[pid], ck=ckOf(p,i), box=document.querySelector(`#view .hchk[data-pid="${pid}"][data-i="${i}"]`); if(!ck||!box) return;
-  const ins=[...box.querySelectorAll('.hin')], raw=ins.map(x=>x.value.trim().slice(0,20));
+  const ins=[...box.querySelectorAll('.hin')], raw=ins.map(x=>fieldVal(x).slice(0,20));
   if(raw.some(v=>v==='')){ toast('빈칸을 모두 채워 주세요'); return; }
   const oks=ck.map((c,j)=>{ if(c.ch) return +raw[j]===c.a; const x=hintNum(raw[j]); return x!=null&&Math.abs(x-c.a)<1e-6; });
   const vs=ck.map((c,j)=>c.ch?String(c.ch[+raw[j]]||'').replace(/<[^>]+>/g,''):raw[j]);
@@ -588,7 +604,7 @@ function twinBlock(p,s,w){
   if(t.inp) h+=twinInputHTML(t,tr);
   else h+=`<div class="chs">${t.ch.map((c,i)=>{ let cls=''; if(done){ if(i===t.ok) cls='right'; else if(i===tr.a) cls='wrong'; } else if(i===pick) cls='sel';
       return `<button class="${cls}" ${done?'disabled style="opacity:1"':''} onclick="UI.twinPick['${t.id}']=${i};render()"><span class="n">${NUM[i]}</span>${c}</button>`; }).join('')}</div>`;
-  if(!done) h+= t.inp? `<div class="next"><button class="acc" onclick="submitTwinNum('${t.id}')">제출 (한 번만)</button>${CFG.lesson==='first'?`<button class="ghost" onclick="giveUpTwin('${t.id}')">🏳 포기</button>`:''}<span class="cd">종이에 풀고 답을 적어요 · π는 π 또는 파이, 분수는 56/3π처럼</span></div>`
+  if(!done) h+= t.inp? `<div class="next"><button class="acc" onclick="submitTwinNum('${t.id}')">제출 (한 번만)</button>${CFG.lesson==='first'?`<button class="ghost" onclick="giveUpTwin('${t.id}')">🏳 포기</button>`:''}<span class="cd">종이에 풀고 답을 적어요 · 칸을 누르면 나오는 키보드의 <b>π</b>, <b>분수</b> 버튼을 써요</span></div>`
     : `<div class="next"><button class="acc" ${pick==null?'disabled':''} onclick="submitTwin('${t.id}')">제출 (한 번만)</button><span class="cd">종이에 풀고 답을 골라요</span></div>`;
   else {
     h+= tr.a===t.ok? `<div class="verdict r">⭕ ${two?'이번엔 맞혔어요! 놓친 것을 고쳤어요. 이 문제도 완성!':'정답이에요! 이 문제는 완성!'}</div>` : `<div class="verdict w">❌ ${two?'이번에도 아쉬워요':'아쉬워요'}</div>`;
@@ -621,12 +637,12 @@ function twinMatch(t,vs){ const got=vs.map(piVal); if(got.some(g=>!g)) return nu
     else if(w.every((x,j)=>sameVal(x,got[j]))) return i; }
   return t.ch.length; }
 function twinInputHTML(t,tr){ if(tr.a!=null) return '';
-  return `<div class="numin" style="flex-wrap:wrap">${t.inp.map((c,j)=>`${c.l?`<span class="sfx">${c.l}</span>`:''}<input class="twin-in" type="text" autocomplete="off" style="width:${t.ratio?70:130}px"><span class="sfx">${c.u||''}</span>`).join('')}</div>`; }
+  return `<div class="numin" style="flex-wrap:wrap">${t.inp.map((c,j)=>`${c.l?`<span class="sfx">${c.l}</span>`:''}${mfHTML('twin-in','',t.ratio?'':'예: 8π−16',null,t.ratio?70:140)}<span class="sfx">${c.u||''}</span>`).join('')}</div>`; }
 function giveUpTwin(tid){ const t=TBY[tid]; if(MIRROR||!t||(REC.twin[tid]&&REC.twin[tid].a!=null)) return;
   if(!confirm('포기하면 정답과 풀이를 보여 줘요. 확인 문제는 틀린 것으로 남아요. 포기할까요?')) return;
   REC.twin[tid]=Object.assign({},REC.twin[tid],{a:t.ch.length, v:['포기'], gave:true, open:true}); saveRec(); send({t:'twinAns',tid,a:t.ch.length}); render(); reveal('.verdict'); }
 function submitTwinNum(tid){ const t=TBY[tid]; if(!t||(REC.twin[tid]&&REC.twin[tid].a!=null)) return;
-  const vs=[...document.querySelectorAll('#view input.twin-in')].map(x=>x.value.trim().slice(0,30)); if(vs.some(v=>!v)){ toast('빈칸을 모두 채워 주세요'); return; }
+  const vs=[...document.querySelectorAll('#view .twin-in')].map(x=>fieldVal(x).slice(0,30)); if(vs.some(v=>!v)){ toast('빈칸을 모두 채워 주세요'); return; }
   const a=twinMatch(t,vs); if(a==null){ toast('수와 π로만 적어 주세요. 예: 4π, 8π-16, 56/3π'); return; }
   REC.twin[tid]=Object.assign({},REC.twin[tid],{a,v:vs,open:true}); saveRec(); send({t:'twinAns',tid,a}); render(); reveal('.verdict'); }
 /* 핵심 생각 고르기: 이 문제의 💡 규칙을 다른 문제의 규칙과 구별 */
@@ -660,6 +676,12 @@ function viewVid(){ const D=UI.VD; if(!D||!BV[D.k]) return viewBas(); const v=BV
 function vidGo(i,restart){ const D=UI.VD; if(!D) return; const n=BV[D.k].scenes.length; D.i=Math.max(0,Math.min(n-1,i)); if(restart) D.play=true; render(); vidScene(); }
 function vidToggle(){ const D=UI.VD; if(!D) return; D.play=!D.play; if(D.play&&D.i===BV[D.k].scenes.length-1) D.i=0; render(); vidScene(); }
 function vidDone(D){ if(D.counted||MIRROR) return; D.counted=true; const x=Object.assign({n:0},vidStat(D.k)); x.n++; x.t=Date.now(); REC.vid=Object.assign({},REC.vid,{[D.k]:x}); saveRec(); send({t:'vid',k:D.k}); }
+/* ✏️ 수식 입력 칸 (MathLive): π·분수를 패드 키보드로. 읽을 때는 '56/3π' 같은 글자로 바꿔서 예전 채점 그대로 */
+function mfHTML(cls,val,ph,onEnter,w){ if(!window.MathfieldElement) return `<input class="${cls}" type="text" autocomplete="off" placeholder="${esc(ph||'')}" value="${esc(val)}" ${w?`style="width:${w}px"`:''} ${onEnter?`onkeydown="if(event.key==='Enter')${onEnter}"`:''}>`;
+  return `<math-field class="${cls} mf" math-virtual-keyboard-policy="auto" smart-fence="off" placeholder="${esc(ph||'')}" ${w?`style="min-width:${w}px"`:''} ${onEnter?`onkeydown="if(event.key==='Enter'){event.preventDefault();${onEnter}}"`:''}>${esc(val)}</math-field>`; }
+function fieldVal(el){ if(!el) return ''; if(el.tagName!=='MATH-FIELD') return String(el.value||'').trim();
+  let v=''; try{ v=el.getValue('ascii-math'); }catch(e){ v=el.value||''; }
+  return String(v).replace(/\\pi|pi/g,'π').replace(/xx|\*|\\times/g,'×').replace(/\s+/g,'').replace(/−/g,'-').trim(); }
 /* 말풍선 자막: 한 글자씩 나타나고(CSS), 핵심 낱말·수·기호는 색으로 */
 const SUB_TY=45, SUB_RE=/(부채꼴|활꼴|중심각|반지름|지름|반원|넓이|둘레|몇 배|호|현|비|∠AOB|\d*π(?: cm²| cm)?|\d+(?:\.\d+)?(?: ?cm²| ?cm|°|칸|배|조각|개)?|[×÷+=:½])/g;
 function subHTML(t){ let k=0; const ch=str=>[...str].map(c=>`<i style="animation-delay:${(k++)*SUB_TY}ms">${c===' '?' ':esc(c)}</i>`).join('');
@@ -713,7 +735,10 @@ function shelfHTML(){ const played=BT.filter(b=>bstat(b.k).n); if(!played.length
 const CONF_C=['#ff6b6b','#ffcf4a','#4dabf7','#69db7c','#b197fc','#ff9f1c'];
 function celebrate(big,sub){ const o=$('celeb'); if(!o) return; o.querySelector('.cb').textContent=big; o.querySelector('.cs').innerHTML=sub||'';
   o.querySelector('.conf').innerHTML=Array.from({length:46},(_,i)=>`<i style="left:${Math.random()*100}%;background:${CONF_C[i%CONF_C.length]};animation-delay:${Math.random()*.6}s;animation-duration:${1.8+Math.random()*1.2}s"></i>`).join('');
-  o.classList.remove('on'); void o.offsetWidth; o.classList.add('on'); clearTimeout(celebrate.t); celebrate.t=setTimeout(()=>o.classList.remove('on'),3000); }
+  o.classList.remove('on'); void o.offsetWidth; o.classList.add('on'); clearTimeout(celebrate.t);
+  const L=$('clot'); try{ if(celebrate.a) celebrate.a.destroy(); celebrate.a=null; L.innerHTML='';
+    if(window.lottie&&window.ANIM_STAR){ celebrate.a=lottie.loadAnimation({container:L,renderer:'svg',loop:false,autoplay:true,animationData:ANIM_STAR}); o.classList.add('lot'); } else o.classList.remove('lot'); }catch(e){ o.classList.remove('lot'); }
+  celebrate.t=setTimeout(()=>{ o.classList.remove('on'); if(celebrate.a){ celebrate.a.destroy(); celebrate.a=null; } },3200); }
 const STAGE_TXT={learn:'배우기 · 단계마다 확인해요', practice:'익히기 · 구할 것·아는 것만 표시하고 바로 풀어요', free:'스스로 · 안내 없이 풀어요'};
 function streakHTML(st){ const n=Math.min(st.streak,3); return `<span class="streak">연속 정답 ${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}${st.star?' <span class="stars">⭐</span>':''}</span>`; }
 function choiceBtns(chs,onPick,state){ // state: {done, ok, picked, wide, also}
