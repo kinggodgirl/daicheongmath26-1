@@ -261,7 +261,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="celeb" id="celeb"><div class="cbox"><div class="cb"></div><div class="cs"></div></div><div class="conf"></div></div>
 
 <script>
-const APP_VER=20261125.9;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.10;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, TW2=U.twins2||[], CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen, BV=U.basicVideo||{};
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
@@ -501,7 +501,9 @@ function ckOf(p,i){ const c=(p.checks||[])[i]; return Array.isArray(c)&&c.length
 function hintAns(pid,i){ const h=REC.hint[pid]; return h&&h.ha&&h.ha['h'+(i+1)]||null; }
 function hintOk(pid,i){ const a=hintAns(pid,i); return !!(a&&a.ok); }
 /* 힌트 질문에 답하지 않고 시간만 기다려 넘기지 못하게: 맞히거나, 두 번 틀리거나(정답 공개), 포기해야 다음으로 */
-function hintGate(pid,i){ const p=PBY[pid]; if(!ckOf(p,i)) return false; const a=hintAns(pid,i)||{}; return !a.ok&&!a.gave&&(a.n||0)<2; }
+/* 정답을 보여 주기 전 기회: 숫자 칸은 2번, 보기 고르기만 있는 질문은 1번 (찍어서 맞히지 못하게) */
+function tryLim(ck){ return ck&&ck.every(c=>c.ch)?1:2; }
+function hintGate(pid,i){ const p=PBY[pid], ck=ckOf(p,i); if(!ck) return false; const a=hintAns(pid,i)||{}; return !a.ok&&!a.gave&&(a.n||0)<tryLim(ck); }
 function ckVal(c){ return c.ch? c.ch[c.a] : Number.isInteger(c.a)? c.a : fmtAns(c.a); }
 function ckUnit(c){ return /^[°π]/.test(c.u||'')||!c.u?(c.u||''):' '+c.u; }
 function hintCheckHTML(p,i,active){
@@ -509,13 +511,13 @@ function hintCheckHTML(p,i,active){
   const a=hintAns(p.id,i);
   if(a&&a.ok) return `<div class="hdone">✅ 맞았어요: ${ck.map((c,j)=>`${c.l} ${c.ch?c.ch[c.a]:Number.isInteger(c.a)?c.a:esc(String((a.v||[])[j]??c.a))}${ckUnit(c)}`).join(', ')}</div>`;
   const ansTxt=()=>ck.map(c=>`${c.l} <b>${ckVal(c)}</b>${ckUnit(c)}`).join(', ');
-  if(a&&!a.gave&&(a.n||0)>=2) return `<div class="hdone" style="background:#fff6d6;border-color:#e8c547;color:var(--ink)">💡 두 번 틀렸어요. 정답: ${ansTxt()} → 종이에 옮겨 쓰고, 힌트를 다시 읽으며 왜 그런지 생각해 봐요.</div>`;
+  if(a&&!a.gave&&(a.n||0)>=tryLim(ck)) return `<div class="hdone" style="background:#fff6d6;border-color:#e8c547;color:var(--ink)">💡 ${tryLim(ck)>1?'두 번 ':''}틀렸어요. 정답: ${ansTxt()} → 종이에 옮겨 쓰고, 힌트를 다시 읽으며 왜 그런지 생각해 봐요.</div>`;
   if(a&&a.gave) return `<div class="hdone" style="background:#f3f0ea;border-color:#cdbfa6;color:var(--ink)">🏳 포기했어요. 정답: ${ansTxt()} → 종이에 옮겨 쓰고, 왜 그런지 힌트를 다시 읽어 봐요.</div>`;
   if(!active) return '';
   const last=a&&Array.isArray(a.v)?a.v:[];
   return `<div class="hchk" data-pid="${p.id}" data-i="${i}">${ck.map((c,j)=>c.ch?`<label>${c.l} <select class="hin"><option value="">고르기</option>${c.ch.map((o,k)=>`<option value="${k}">${o}</option>`).join('')}</select></label>`:`<label>${c.l} <input class="hin" autocomplete="off" placeholder="${c.ph||''}" value="${esc(String(last[j]??''))}" onkeydown="if(event.key==='Enter')checkHint('${p.id}',${i})"> ${c.u}</label>`).join('')}
     <button class="acc" onclick="checkHint('${p.id}',${i})">답 확인</button>${CFG.lesson==='first'?`<button class="ghost" onclick="giveUpHint('${p.id}',${i})">🏳 포기</button>`:''}
-    <div class="hm" id="hm">${a&&a.n?`아직 아니에요 (${a.n}번 시도). 힌트를 다시 읽고 종이에 써 보세요.`:'답을 적고 확인을 누르세요. 맞히면 다음 힌트를 바로 볼 수 있어요.'}</div></div>`;
+    <div class="hm" id="hm">${a&&a.n?`아직 아니에요 (${a.n}번 시도). 힌트를 다시 읽고 종이에 써 보세요.`:(tryLim(ck)>1?'답을 적고 확인을 누르세요. 맞히면 다음 힌트를 바로 볼 수 있어요.':'잘 생각해서 하나만 골라요. 기회는 한 번이에요.')}</div></div>`;
 }
 function esc(v){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function hintNum(v){ return parseNum(String(v).replace(/파이|pi/gi,'')); }
@@ -531,7 +533,7 @@ function checkHint(pid,i){
   if(ok) h.t=0;                      // 기다림 끝
   REC.hint[pid]=h; saveRec(); send({t:'hint',pid,lv:hintLv(pid)});
   if(ok){ toast(hintLv(pid)<p.hints.length?'맞아요! 다음 힌트를 바로 볼 수 있어요':'맞아요! 이제 다시 풀어 봐요'); render(); reveal('.next'); return; }
-  if(h.ha['h'+(i+1)].n>=2){ render(); toast('정답을 보고 종이에 옮겨 써요'); return; }
+  if(h.ha['h'+(i+1)].n>=tryLim(ck)){ render(); toast('정답을 보고 종이에 옮겨 써요'); return; }
   ins.forEach((x,j)=>{ x.classList.toggle('bad',!oks[j]); x.classList.toggle('good',oks[j]); });
   const m=box.querySelector('#hm'); if(m) m.textContent=`아직 아니에요 (${h.ha['h'+(i+1)].n}번 시도).${ck.length>1?' 빨간 칸을 다시 생각해 보세요.':''} 힌트를 다시 읽고 종이에 써 보세요.`;
 }
