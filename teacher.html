@@ -179,10 +179,12 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.13;            // index.html 과 같은 값이어야 함
+const APP_VER=20261125.14;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, TW2=U.twins2||[], CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.concat(TW2).map(t=>[t.id,t])), T2OF=Object.fromEntries(TW2.map(t=>[t.of,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
+/* 🧩 선수지식 (units/_prereq.js) — 이 단원 힌트에서 쓰는 것만, 어느 문제·힌트에서 쓰는지 */
+const PRE=window.PREREQ||{}, PK=[...new Set(P.flatMap(p=>(p.pre||[]).filter(k=>k&&PRE[k])))], PUSE=Object.fromEntries(PK.map(k=>[k,P.flatMap(p=>(p.pre||[]).map((x,i)=>x===k?`${p.no}-힌트${i+1}`:null).filter(Boolean))]));
 for(const p of P) if(!TOF[p.id]) TOF[p.id]={id:'none-'+p.id, of:p.id, ch:['-'], ok:0, why:[''], none:true};   // 확인 문제가 없는 문제
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -205,7 +207,7 @@ $('ttl').textContent='교사용 · '+U.title; document.title='교사용 · '+U.t
    classes/{코드}/stu/{이름}/p   ← 학생이 씀 (접속 표시·현재 위치)
    S.recs 는 서버 기록을 이 컴퓨터에도 복사해 둔 것 (CSV·백업용)
 ------------------------------------------------------------ */
-function blank(){ return {diag:{},seen:{},hint:{},solved:{},twin:{},bas:{},vid:{},err:{},rule:{},mix:null,game:null,loc:'',progT:0}; }
+function blank(){ return {diag:{},seen:{},hint:{},solved:{},twin:{},bas:{},vid:{},pre:{},err:{},rule:{},mix:null,game:null,loc:'',progT:0}; }
 function R(name){ return S.recs[name]||blank(); }
 function roster(){ return Object.keys(S.recs).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true})); }
 function onlineNames(){ const set=new Set(); for(const n in LIVE) if(LIVE[n]&&LIVE[n].online) set.add(n); return set; }
@@ -333,6 +335,7 @@ function mergeRec(r,x){
   for(const tid in (x.twin||{})) if(okTid(tid)){ const y=x.twin[tid]||{}, cur=Object.assign({},r.twin[tid]); const a=+y.a;
     if(y.open) cur.open=true; if(cur.a==null&&y.a!=null&&a>=0&&a<=TBY[tid].ch.length){ cur.a=a; const vv=Array.isArray(y.v)?y.v:Object.values(y.v||{}); if(vv.length) cur.v=vv.slice(0,3).map(z=>String(z).slice(0,30)); } if(!cur.cause&&CN[y.cause]) cur.cause=y.cause;
     if(cur.open||cur.a!=null) r.twin[tid]=cur; }
+  for(const k in (x.pre||{})) if(PRE[k]){ const y=x.pre[k]||{}, cur=(r.pre||{})[k]; const n=Math.min(999,+y.n||0); if(!cur||n>cur.n||(y.done&&!cur.done)) r.pre=Object.assign({},r.pre,{[k]:{o:Math.min(999,+y.o||0),n,ok:Math.min(n,+y.ok||0),done:!!(y.done||(cur&&cur.done))}}); }
   for(const k in (x.vid||{})) if(okB(k)){ const n=Math.min(999,+(x.vid[k]||{}).n||0); if(n>((r.vid||{})[k]||0)) r.vid=Object.assign({},r.vid,{[k]:n}); }
   for(const k in (x.bas||{})) if(okB(k)){ const y=x.bas[k]||{}, cur=r.bas[k]; if(!cur || (+y.n||0)>cur.n){ const ws={}; for(const w in (y.ws||{})) if(/^[0-9]$/.test(w)) ws[w]=+y.ws[w]||0;
       const rc=Array.isArray(y.recent)?y.recent:Object.values(y.recent||{});
@@ -573,9 +576,16 @@ function panelPts(){
   <div style="overflow-x:auto"><table class="mx"><tr><th>학생</th><th>포인트</th>${PTS.RULES.map(r=>`<th title="${esc(r.t)}" style="font-size:12px">${esc(r.t.split(/[ (—]/)[0])}<br>+${r.p}</th>`).join('')}<th>⚾ 대전</th><th>보유</th><th>🎲 굴린 수</th><th>스티커</th></tr>
   ${rows.map(x=>`<tr><td class="nm">${esc(x.n)}</td><td><b>${x.q.total}</b></td>${PTS.RULES.map(r=>`<td>${x.q.n[r.k]||''}</td>`).join('')}<td>${bankOf(x.n)?(bankOf(x.n)>0?'+':'')+bankOf(x.n):''}</td><td><b>${x.q.total+bankOf(x.n)}</b></td><td>${x.used||''}</td><td>${x.stc||''}</td></tr>`).join('')}</table></div>`;
 }
+function panelPre(all){ if(!PK.length) return '';
+  return `<div class="grp"><b>🧩 선수지식</b> · 힌트 아래 버튼으로 들어와 짧은 설명을 보고 연습 3문제를 풀어요. 힌트 질문을 틀리면 버튼이 눈에 띄게 바뀌어요. <b>익힘</b>은 3문제 중 2개 이상 맞힌 학생이에요.</div><div class="help">${PK.map(k=>{ const D=PRE[k]; let n=0,ok=0; const who=[], done=[];
+      for(const x of all){ const y=(R(x).pre||{})[k]; if(!y) continue; who.push(x); n+=y.n||0; ok+=y.ok||0; if(y.done) done.push(x); }
+      const yet=who.filter(x=>!done.includes(x));
+      return `<div class="hc"><div class="nm" style="font-size:16px">${D.icon||''} ${D.name}</div><div class="loc">쓰는 곳: ${PUSE[k].join(', ')}</div>
+        <div class="stat">들어온 학생 <b>${who.length}</b> · 익힘 <b>${done.length}</b> · 연습 정답률 <b>${n?Math.round(ok/n*100):0}%</b></div>
+        ${yet.length?`<div class="stat m" style="color:var(--x)">아직 못 익힘: ${yet.map(esc).join(', ')}</div>`:''}${done.length?`<div class="stat m">익힘: ${done.map(esc).join(', ')}</div>`:''}</div>`; }).join('')}</div><div class="grp" style="margin-top:14px"><b>🧱 기초 연습</b></div>`; }
 function panelBas(){
   const all=roster(), names=all.filter(n=>Object.keys(R(n).bas).length);
-  let h=`<div class="tool"><span class="muted">학생이 "도저히 못 풀겠다" 싶을 때 스스로 들어오는 기초 연습이에요. 문제는 매번 새로 만들어지고, 연속 3개를 맞히면 ⭐.</span></div>`;
+  let h=`<div class="tool"><span class="muted">학생이 "도저히 못 풀겠다" 싶을 때 스스로 들어오는 기초 연습이에요. 문제는 매번 새로 만들어지고, 연속 3개를 맞히면 ⭐.</span></div>`+panelPre(all);
   h+=`<div class="help">${BT.map(b=>{ let n=0,ok=0,stars=0,people=0; const ws={}; const vids=all.filter(x=>(R(x).vid||{})[b.k]);
       for(const x of all){ const y=R(x).bas[b.k]; if(!y) continue; people++; n+=y.n; ok+=y.ok; if(y.star) stars++; for(const w in (y.ws||{})) ws[w]=(ws[w]||0)+y.ws[w]; }
       const wl=Object.entries(ws).filter(([w])=>+w>0).sort((a,c)=>c[1]-a[1]).map(([w,c])=>`${b.steps[w-1]||w+'번째 단계'} ${c}`).join(' · ');
@@ -648,11 +658,11 @@ function download(name,text,type){ const a=document.createElement('a'); a.href=U
 function stamp(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
 function exportCSV(){
   const q=s=>`"${String(s??'').replace(/"/g,'""')}"`, W={o:'맞음',t:'막힘',x:'틀림'};
-  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`,`${p.no}힌트답`,`${p.no}오류위치`,`${p.no}핵심생각`,`${p.no}확인답`,`${p.no}확인정오`,`${p.no}확인이유`,`${p.no}재확인답`,`${p.no}재확인정오`]),...BT.flatMap(b=>[`기초${b.k}푼수`,`기초${b.k}정답`,`기초${b.k}별`]),'포인트','대전손익','주사위','스티커'];
+  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`,`${p.no}힌트답`,`${p.no}오류위치`,`${p.no}핵심생각`,`${p.no}확인답`,`${p.no}확인정오`,`${p.no}확인이유`,`${p.no}재확인답`,`${p.no}재확인정오`]),...BT.flatMap(b=>[`기초${b.k}푼수`,`기초${b.k}정답`,`기초${b.k}별`]),...PK.map(k=>'선수지식 '+PRE[k].name),'포인트','대전손익','주사위','스티커'];
   const rows=roster().map(n=>{ const r=R(n);
     return [n,...P.flatMap(p=>{ const hh=r.hint[p.id]||{}, sv=r.solved[p.id], t=TOF[p.id], x=r.twin[t.id]||{};
       return [W[r.diag[p.id]]||'',hh.lv||0,hh.sol?'O':'',sv?'O':'',sv&&sv.cause?CN[sv.cause]:'', hintAnsTxt(r,p), (r.err||{})[p.id]?CN[r.err[p.id]]:'', (r.rule||{})[p.id]?(r.rule[p.id].ok?'O':'X'):'', x.a!=null?(x.a<t.ch.length?x.a+1:'기타 '+((x.v||[]).join('/'))):'', x.a!=null?(x.a===t.ok?'O':'X'):'', x.cause?CN[x.cause]:'', ...(()=>{ const t2=T2OF[p.id], y=(t2&&r.twin[t2.id])||{}; return y.a!=null?[y.a<t2.ch.length?y.a+1:'기타 '+((y.v||[]).join('/')), y.a===t2.ok?'O':'X']:['','']; })()]; }),
-      ...BT.flatMap(b=>{ const y=r.bas[b.k]; return y?[y.n,y.ok,y.star?'O':'']:['','','']; }), PTS.calc(r,U).total, bankOf(n), (r.game&&r.game.used)||0, Object.values((r.game&&r.game.st)||{}).reduce((a,b)=>a+b,0)]; });
+      ...BT.flatMap(b=>{ const y=r.bas[b.k]; return y?[y.n,y.ok,y.star?'O':'']:['','','']; }), ...PK.map(k=>{ const y=(r.pre||{})[k]; return y?`${y.ok}/${y.n}${y.done?' 익힘':''}`:''; }), PTS.calc(r,U).total, bankOf(n), (r.game&&r.game.used)||0, Object.values((r.game&&r.game.st)||{}).reduce((a,b)=>a+b,0)]; });
   download(`단원마무리-${stamp()}.csv`,'\ufeff'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n'),'text/csv;charset=utf-8');
 }
 function backup(){ download(`단원마무리-백업-${stamp()}.json`,JSON.stringify({app:'unit-review',unit:U.id,ver:APP_VER,state:S},null,1),'application/json'); }
