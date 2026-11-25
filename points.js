@@ -11,6 +11,7 @@ const RULES = [            // 학생 화면 '포인트는 이렇게 모아요' �
   {k:'solve', t:'힌트로 다시 풀어 해결 (풀이를 봤다면 덮고 혼자 다시 써서)', p:3},
   {k:'first', t:'처음부터 맞힌 문제 — 확인 문제까지 맞혔을 때', p:3},
   {k:'twin',  t:'확인 문제 정답',                       p:5},
+  {k:'twin2', t:'재확인 문제 정답 (확인 문제를 틀린 뒤 고쳐서)', p:3},
   {k:'why',   t:'확인 문제를 틀렸을 때 놓친 것 찾기',     p:1},
   {k:'rule',  t:'핵심 생각 바르게 고르기',               p:2},
   {k:'bas',   t:'기초 연습 정답',                       p:1},
@@ -25,6 +26,7 @@ function calc(rec, unit){
   rec = rec || {}; const n = {}; RULES.forEach(r=>n[r.k]=0);
   const P = (unit && unit.problems) || [], TW = (unit && unit.twins) || [];
   const tOf = {}; TW.forEach(t=>tOf[t.of]=t);
+  const t2Of = {}; ((unit && unit.twins2) || []).forEach(t=>t2Of[t.of]=t);
   for(const p of P){
     const h = (rec.hint||{})[p.id] || {};
     for(const q in (h.ha||{})) if(h.ha[q] && h.ha[q].ok) n.hint++;
@@ -35,6 +37,8 @@ function calc(rec, unit){
       if(+x.a===t.ok){ n.twin++; if((rec.diag||{})[p.id]==='o') n.first++; }
       else if(x.cause) n.why++;
     }
+    const t2 = t2Of[p.id], y = t2 && (rec.twin||{})[t2.id];
+    if(y && y.a!=null && +y.a===t2.ok) n.twin2++;
     const r = (rec.rule||{})[p.id]; if(r && r.ok) n.rule++;
   }
   for(const k in (rec.bas||{})){ const b = rec.bas[k]||{}; n.bas += +b.ok||0; if(b.star) n.star++; n.self += +b.selfN||0; }
