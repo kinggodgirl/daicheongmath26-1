@@ -177,10 +177,10 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.7;            // index.html 과 같은 값이어야 함
+const APP_VER=20261125.8;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
-const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
-const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
+const U=window.UNIT, P=U.problems, TW=U.twins, TW2=U.twins2||[], CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
+const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.concat(TW2).map(t=>[t.id,t])), T2OF=Object.fromEntries(TW2.map(t=>[t.of,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
 for(const p of P) if(!TOF[p.id]) TOF[p.id]={id:'none-'+p.id, of:p.id, ch:['-'], ok:0, why:[''], none:true};   // 확인 문제가 없는 문제
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -387,8 +387,11 @@ function flagsOf(n){
   for(const p of P){ const d=r.diag[p.id], h=r.hint[p.id]||{}, sv=r.solved[p.id];
     if((d==='t'||d==='x') && !sv && (h.lv||0)>=p.hints.length) f.push({c:'r', k:p.id+(h.sol?'s':''), t:`${p.no} 힌트 다 보고도 못 품${h.sol?' (풀이 봄)':''}`, w:3}); }
   for(const p of P){ if(r.solved[p.id]) continue; for(const m of hintMiss(r,p)) if(m.gave) f.push({c:'y', k:p.id+'h'+m.i+'-g', t:`${p.no} 힌트${m.i} 질문 포기${m.n?` (${m.n}번 시도: ${esc(m.v.join(', '))})`:''}`, w:2}); else if(m.n>=3) f.push({c:'y', k:p.id+'h'+m.i+'-'+m.n, t:`${p.no} 힌트${m.i} 질문 ${m.n}번 틀림 (적은 답: ${esc(m.v.join(', '))})`, w:2}); }
-  for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok){ const over=r.diag[t.of]==='o';
-    f.push({c:over?'r':'y', k:t.id, t:`${over?'과신 · ○로 채점했는데 ':''}확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${t.why[x.a]||(x.v?'적은 답 '+esc(x.v.join(t.ratio?' : ':', ')):'')}`, w:over?3:2}); } }
+  for(const t of TW){ const x=r.twin[t.id]; if(x&&x.a!=null&&x.a!==t.ok){ const over=r.diag[t.of]==='o', t2=T2OF[t.of], y=t2&&r.twin[t2.id];
+    if(y&&y.a===t2.ok) continue;   // 재확인 문제를 맞혀 회복함
+    const why=(tt,z)=>tt.why[z.a]||(z.v?'적은 답 '+esc(z.v.join(tt.ratio?' : ':', ')):'');
+    if(y&&y.a!=null){ f.push({c:'r', k:t2.id, t:`확인·재확인 ${PBY[t.of].no} 모두 틀림 → ${why(t,x)} / ${why(t2,y)}${x.cause?' · '+CN[x.cause]:''} · 직접 도와주세요`, w:3}); continue; }
+    f.push({c:over?'r':'y', k:t.id, t:`${over?'과신 · ○로 채점했는데 ':''}확인 ${PBY[t.of].no} 틀림${x.cause?' · '+CN[x.cause]:''} → ${why(t,x)}${t2?(y&&y.open?' · 재확인 푸는 중':' · 재확인 남음'):''}`, w:over?3:2}); } }
   for(const b of BT){ const x=r.bas[b.k]; if(x&&x.recent&&x.recent.length>=3&&x.recent.slice(-3).every(v=>!v)) f.push({c:'p', k:b.k+'-'+x.n, t:`기초 ${b.name}: 3번 연속 틀림`, w:3}); }
   if(onlineNames().has(n) && r.progT && now()-r.progT>STALL_MIN*60000) f.push({c:'g', k:'stall-'+r.progT, t:`${Math.floor((now()-r.progT)/60000)}분째 진행 없음`, w:1});
   const ack=(S.ack||{})[n]||[];
@@ -429,7 +432,8 @@ function renderStudents(){
     : '<li class="muted">아직 들어온 학생이 없어요. 학생 주소나 수업 코드를 알려 주세요.</li>';
 }
 function summaryOf(n){ const r=R(n); const solved=P.filter(p=>r.diag[p.id]==='o'||r.solved[p.id]).length; const tw=TW.filter(t=>r.twin[t.id]&&r.twin[t.id].a!=null); const ok=tw.filter(t=>r.twin[t.id].a===t.ok).length; const st=BT.filter(b=>r.bas[b.k]&&r.bas[b.k].star).length;
-  return `해결 ${solved}/${P.length} · 확인 ⭕${ok}/${tw.length}${Object.keys(r.bas).length?` · 기초 ⭐${st}`:''} · ${PTS.calc(r,U).total}점`; }
+  const re=TW2.filter(t=>r.twin[t.id]&&r.twin[t.id].a===t.ok).length;
+  return `해결 ${solved}/${P.length} · 확인 ⭕${ok}/${tw.length}${re?` · 재확인 회복 ${re}`:''}${Object.keys(r.bas).length?` · 기초 ⭐${st}`:''} · ${PTS.calc(r,U).total}점`; }
 /* 같은 이유로 막힌 학생이 많으면(3명 이상이면서 반의 30% 이상) '함께 볼까요?' */
 function togetherHTML(names){ const N=names.length, need=Math.max(3,Math.ceil(N*0.3)), out=[];
   for(const p of P){ const cnt={}; for(const n of names){ const r=R(n), k=(r.err||{})[p.id]; if(k&&!r.solved[p.id]&&r.diag[p.id]&&r.diag[p.id]!=='o'&&!/unsure$/.test(k)) (cnt[k]=cnt[k]||[]).push(n); }
@@ -469,21 +473,25 @@ function panelProb(){
       <span class="seg">${[['lock','잠금'],['hint','풀이 막기'],['all','풀이 허용']].map(([m,l])=>`<button class="${md===m?'sel '+m:''}" onclick="setMode('${p.id}','${m}')">${l}</button>`).join('')}</span>
       ${barHTML(c,N)}</div>
       <div class="stat" style="cursor:pointer" onclick="toggleNames('${k}')">처음에 막힘(△×) <b>${stuck.length}</b> → 다시 풀어 해결 <b>${solved.length}</b>${solved.length?` <span class="m">(힌트로 ${byHint} · 풀이 보고 ${bySol})</span>`:''} · 아직 <b style="color:var(--x)">${notYet.length}</b>
-        ${t.none?'':`&nbsp;|&nbsp; 확인 문제 <b>${right}</b>/${ts.sub} 정답${ts.open-ts.sub>0?` <span class="m">(푸는 중 ${ts.open-ts.sub})</span>`:''}`}
+        ${t.none?'':`&nbsp;|&nbsp; 확인 문제 <b>${right}</b>/${ts.sub} 정답${ts.open-ts.sub>0?` <span class="m">(푸는 중 ${ts.open-ts.sub})</span>`:''}`}${T2OF[p.id]?(()=>{ const t2=T2OF[p.id], s2=twinStats(t2,names); return s2.open?` · 재확인 <b>${s2.by[t2.ok].length}</b>/${s2.sub} 회복${s2.open-s2.sub>0?` <span class="m">(푸는 중 ${s2.open-s2.sub})</span>`:''}`:''; })():''}
         ${Object.keys(causes).length?` &nbsp;|&nbsp; 막힌 이유: ${Object.entries(causes).map(([cc,v])=>`${CN[cc]} <b>${v}</b>`).join(' · ')}`:''} <span class="m">▾</span></div>
-      ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생:</b> ${tags(notYet.map(x=>{const hh=R(x).hint[p.id]; const ms=hintMiss(R(x),p).filter(m=>m.i===(hh&&hh.lv)); const ek=(R(x).err||{})[p.id]; return x+(hh&&hh.lv?` (힌트${hh.lv}${ms.length?(ms[0].gave?' 🏳포기':` 답 ❌${ms[0].n}`):''})`:'')+(ek?` 🔎${CN[ek]||''}`:'');}))}<br><b>확인 문제 틀림:</b> ${tags(names.filter(x=>{const y=R(x).twin[t.id]; return y&&y.a!=null&&y.a!==t.ok;}))}</div>`:''}</div>`; });
+      ${OPEN[k]?`<div class="names"><b>아직 못 푼 학생:</b> ${tags(notYet.map(x=>{const hh=R(x).hint[p.id]; const ms=hintMiss(R(x),p).filter(m=>m.i===(hh&&hh.lv)); const ek=(R(x).err||{})[p.id]; return x+(hh&&hh.lv?` (힌트${hh.lv}${ms.length?(ms[0].gave?' 🏳포기':` 답 ❌${ms[0].n}`):''})`:'')+(ek?` 🔎${CN[ek]||''}`:'');}))}<br><b>확인 문제 틀림:</b> ${tags(names.filter(x=>{const y=R(x).twin[t.id]; return y&&y.a!=null&&y.a!==t.ok;}).map(x=>x+t2Tag(R(x),p.id)))}</div>`:''}</div>`; });
   h+=`<div class="grp" style="margin-top:20px"><b>학생별 현황</b> · 기호=채점, H=연 힌트 수, ✔=다시 풀어 해결, ⭕❌=확인 문제</div>`;
   h+=`<table class="mx"><tr><th>학생</th>${P.map(p=>`<th>${p.no}</th>`).join('')}<th>기초 ⭐</th></tr>`+names.map(n=>{ const r=R(n);
-    return `<tr><td class="nm">${esc(n)}</td>${P.map(p=>{ const d=r.diag[p.id], hh=r.hint[p.id], sv=r.solved[p.id], x=r.twin[TOF[p.id].id], tw=x&&x.a!=null?(x.a===TOF[p.id].ok?'⭕':'❌'):(x&&x.open?'…':'');
-      return `<td class="${tw==='⭕'?'ok':tw==='❌'?'bad':''}">${d?`<span class="mk ${d}">${MK[d]}</span>`:'·'} <span class="lv">${hh&&hh.lv?'H'+hh.lv:''}${hh&&hh.sol?'풀':''}</span>${sv?'✔':''}${tw}</td>`; }).join('')}
+    return `<tr><td class="nm">${esc(n)}</td>${P.map(p=>{ const d=r.diag[p.id], hh=r.hint[p.id], sv=r.solved[p.id], x=r.twin[TOF[p.id].id], tw=(x&&x.a!=null?(x.a===TOF[p.id].ok?'⭕':'❌'):(x&&x.open?'…':''))+(tw2Mark(r,p.id)), cls=/⭕$/.test(tw)?'ok':/❌$/.test(tw)?'bad':'';
+      return `<td class="${cls}">${d?`<span class="mk ${d}">${MK[d]}</span>`:'·'} <span class="lv">${hh&&hh.lv?'H'+hh.lv:''}${hh&&hh.sol?'풀':''}</span>${sv?'✔':''}${tw}</td>`; }).join('')}
       <td>${BT.filter(b=>r.bas[b.k]&&r.bas[b.k].star).map(b=>b.k).join(' ')}</td></tr>`; }).join('')+`</table>`;
   return h;
 }
+/* 재확인 문제 결과 표시: 확인 문제를 틀린 학생만 풂 */
+function tw2Mark(r,pid){ const t2=T2OF[pid], y=t2&&r.twin[t2.id]; if(!y) return ''; return y.a!=null?(y.a===t2.ok?'→⭕':'→❌'):(y.open?'→…':''); }
+function t2Tag(r,pid){ const t2=T2OF[pid], y=t2&&r.twin[t2.id]; if(!y) return ' (재확인 전)'; return y.a!=null?(y.a===t2.ok?' → 재확인 ⭕ 회복':' → 재확인 ❌'):' (재확인 푸는 중)'; }
 function panelTwin(){
   const names=roster();
-  let h=`<div class="tool"><span class="muted">학생은 채점에서 ○를 골랐거나 다시 풀어 해결한 뒤에 확인 문제를 풀 수 있어요. 제출은 한 번, 제출하면 바로 정답·풀이가 보여요.</span></div>`;
-  for(const t of TW){ const of=PBY[t.of], st=twinStats(t,names), right=st.by[t.ok].length, k='t'+t.id;
-    h+=`<div class="twc"><div><b style="font-size:18px">확인 ${of.no}</b> <span class="muted">(${of.title}와 쌍둥이)</span> <span class="cnt2">· 제출 <b>${st.sub}</b>${st.open-st.sub>0?` · 푸는 중 ${st.open-st.sub}`:''} · 정답률 <b>${st.sub?Math.round(right/st.sub*100):0}%</b></span></div>
+  let h=`<div class="tool"><span class="muted">학생은 채점에서 ○를 골랐거나 다시 풀어 해결한 뒤에 확인 문제를 풀 수 있어요. 제출은 한 번, 제출하면 바로 정답·풀이가 보여요.${TW2.length?' 확인 문제를 틀린 학생은 놓친 것을 고른 뒤 <b>🔁 재확인 문제</b>(숫자만 또 바뀐 문제)를 한 번 더 풀어요. 재확인까지 틀리면 🙋 지금 도울 학생에 빨갛게 떠요.':''}</span></div>`;
+  for(const t of TW.concat(TW2)){ const of=PBY[t.of], st=twinStats(t,names), right=st.by[t.ok].length, k='t'+t.id, two=TW2.includes(t);
+    if(two&&!st.open) continue;
+    h+=`<div class="twc" ${two?'style="border-left:6px solid #9cc0ef"':''}><div><b style="font-size:18px">${two?'🔁 재확인':'확인'} ${of.no}</b> <span class="muted">(${of.title}와 쌍둥이${two?' · 확인 문제를 틀린 학생만':''})</span> <span class="cnt2">· 제출 <b>${st.sub}</b>${st.open-st.sub>0?` · 푸는 중 ${st.open-st.sub}`:''} · 정답률 <b>${st.sub?Math.round(right/st.sub*100):0}%</b></span></div>
       <div class="q"><div class="ptext" style="font-weight:700">${t.text}</div><div>${t.fig?t.fig():''}</div></div>
       ${t.ch.map((c,i)=>`<div class="chrow ${i===t.ok?'ok':''}" onclick="toggleNames('${k}')"><span>${NUM[i]} ${c} ${i===t.ok?'✔':''}</span><div class="cb"><div style="width:${st.sub?st.by[i].length/st.sub*100:0}%"></div></div><b>${st.by[i].length}명</b>${t.why[i]?`<span class="why">→ ${t.why[i]}</span>`:''}</div>`).join('')}
       ${t.inp&&st.by[t.ch.length].length?`<div class="chrow" onclick="toggleNames('${k}')"><span>기타 답</span><div class="cb"><div style="width:${st.sub?st.by[t.ch.length].length/st.sub*100:0}%"></div></div><b>${st.by[t.ch.length].length}명</b><span class="why">→ ${st.by[t.ch.length].map(n=>esc(((R(n).twin[t.id]||{}).v||[]).join(t.ratio?':':','))).join(' · ')}</span></div>`:''}
@@ -582,7 +590,7 @@ function panelPreview(){
       <div style="margin-top:6px;color:var(--acc);font-weight:700">정답: ${p.ans}</div><ol>${p.hints.map(x=>`<li>${x}</li>`).join('')}</ol>
       <div style="margin-top:8px;background:var(--o-soft);border-radius:10px;padding:10px"><b>풀이</b><br>${p.sol}<div style="margin-top:6px;font-weight:900">💡 ${p.rule}</div></div></div><div>${p.fig?p.fig():''}</div></div></div>`;
   h+=`<div class="grp"><b>확인 문제</b></div>`;
-  for(const t of TW) h+=`<div class="pv"><div class="q"><div><b>확인 ${PBY[t.of].no}</b><div class="ptext">${t.text}</div><div style="margin-top:6px">${t.ch.map((c,i)=>`${NUM[i]} ${c}${i===t.ok?' ✔':''}`).join(' &nbsp; ')}</div><div class="muted" style="margin-top:4px">${t.exp}</div></div><div>${t.fig?t.fig():''}</div></div></div>`;
+  for(const t of TW.concat(TW2)) h+=`<div class="pv"><div class="q"><div><b>${TW2.includes(t)?'🔁 재확인':'확인'} ${PBY[t.of].no}</b><div class="ptext">${t.text}</div><div style="margin-top:6px">${t.ch.map((c,i)=>`${NUM[i]} ${c}${i===t.ok?' ✔':''}`).join(' &nbsp; ')}</div><div class="muted" style="margin-top:4px">${t.exp}</div></div><div>${t.fig?t.fig():''}</div></div></div>`;
   h+=`<div class="grp"><b>기초 연습 예시</b> (매번 새로 만들어져요)</div>`;
   for(const b of BT){ const q=U.basicGen[b.k](); h+=`<div class="pv"><div class="q"><div><b>${b.name}</b><div class="ptext">${q.text}</div><div style="margin-top:6px">${q.kind==='mc'?q.choices.map((c,i)=>i===q.ok?`<b>✔ ${c}</b>`:c).join(' · '):`정답: ${q.ans} ${q.suffix}`}</div>
       ${q.steps.length?`<ol>${q.steps.map(s=>`<li>${s.q}</li>`).join('')}</ol>`:''}</div><div>${q.fig||''}</div></div></div>`; }
@@ -627,7 +635,7 @@ function renderBig(){
   const names=roster(), N=names.length;
   let h=`<h2>문제별 진행 <span class="muted" style="font-size:18px">초록 = 해결(처음부터 ○ 포함) · 오른쪽 = 확인 문제 정답</span></h2>`;
   h+=P.map(p=>{ const done=names.filter(n=>R(n).diag[p.id]==='o'||R(n).solved[p.id]).length, t=TOF[p.id], st=twinStats(t,names);
-    return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?done/N*100:0}%">${done||''}</div></div><span style="width:190px">${t.none?'':`확인 ⭕ ${st.by[t.ok].length} / ${st.sub}`}</span></div>`; }).join('');
+    return `<div class="brow"><span class="no">${p.no}</span><div class="bar"><div class="seg-o" style="width:${N?done/N*100:0}%">${done||''}</div></div><span style="width:270px">${t.none?'':`확인 ⭕ ${st.by[t.ok].length} / ${st.sub}${T2OF[p.id]&&twinStats(T2OF[p.id],names).sub?` · 회복 ${twinStats(T2OF[p.id],names).by[T2OF[p.id].ok].length}`:''}`}</span></div>`; }).join('');
   $('bigBody').innerHTML=h;
 }
 
@@ -636,10 +644,10 @@ function download(name,text,type){ const a=document.createElement('a'); a.href=U
 function stamp(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
 function exportCSV(){
   const q=s=>`"${String(s??'').replace(/"/g,'""')}"`, W={o:'맞음',t:'막힘',x:'틀림'};
-  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`,`${p.no}힌트답`,`${p.no}오류위치`,`${p.no}핵심생각`,`${p.no}확인답`,`${p.no}확인정오`,`${p.no}확인이유`]),...BT.flatMap(b=>[`기초${b.k}푼수`,`기초${b.k}정답`,`기초${b.k}별`]),'포인트','대전손익','주사위','스티커'];
+  const head=['이름',...P.flatMap(p=>[`${p.no}채점`,`${p.no}힌트`,`${p.no}풀이봄`,`${p.no}해결`,`${p.no}막힌이유`,`${p.no}힌트답`,`${p.no}오류위치`,`${p.no}핵심생각`,`${p.no}확인답`,`${p.no}확인정오`,`${p.no}확인이유`,`${p.no}재확인답`,`${p.no}재확인정오`]),...BT.flatMap(b=>[`기초${b.k}푼수`,`기초${b.k}정답`,`기초${b.k}별`]),'포인트','대전손익','주사위','스티커'];
   const rows=roster().map(n=>{ const r=R(n);
     return [n,...P.flatMap(p=>{ const hh=r.hint[p.id]||{}, sv=r.solved[p.id], t=TOF[p.id], x=r.twin[t.id]||{};
-      return [W[r.diag[p.id]]||'',hh.lv||0,hh.sol?'O':'',sv?'O':'',sv&&sv.cause?CN[sv.cause]:'', hintAnsTxt(r,p), (r.err||{})[p.id]?CN[r.err[p.id]]:'', (r.rule||{})[p.id]?(r.rule[p.id].ok?'O':'X'):'', x.a!=null?(x.a<t.ch.length?x.a+1:'기타 '+((x.v||[]).join('/'))):'', x.a!=null?(x.a===t.ok?'O':'X'):'', x.cause?CN[x.cause]:'']; }),
+      return [W[r.diag[p.id]]||'',hh.lv||0,hh.sol?'O':'',sv?'O':'',sv&&sv.cause?CN[sv.cause]:'', hintAnsTxt(r,p), (r.err||{})[p.id]?CN[r.err[p.id]]:'', (r.rule||{})[p.id]?(r.rule[p.id].ok?'O':'X'):'', x.a!=null?(x.a<t.ch.length?x.a+1:'기타 '+((x.v||[]).join('/'))):'', x.a!=null?(x.a===t.ok?'O':'X'):'', x.cause?CN[x.cause]:'', ...(()=>{ const t2=T2OF[p.id], y=(t2&&r.twin[t2.id])||{}; return y.a!=null?[y.a<t2.ch.length?y.a+1:'기타 '+((y.v||[]).join('/')), y.a===t2.ok?'O':'X']:['','']; })()]; }),
       ...BT.flatMap(b=>{ const y=r.bas[b.k]; return y?[y.n,y.ok,y.star?'O':'']:['','','']; }), PTS.calc(r,U).total, bankOf(n), (r.game&&r.game.used)||0, Object.values((r.game&&r.game.st)||{}).reduce((a,b)=>a+b,0)]; });
   download(`단원마무리-${stamp()}.csv`,'\ufeff'+[head,...rows].map(r=>r.map(q).join(',')).join('\r\n'),'text/csv;charset=utf-8');
 }
