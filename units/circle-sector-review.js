@@ -122,7 +122,7 @@ const PROBLEMS = [
      `135°는 360°의 몇 분의 몇일까요? 약분까지 해 보세요.`
    ],
    checks:[ null, [{l:'원의 넓이',a:64,u:'π cm²'}], [{l:'135°는 360°의',a:3/8,u:'',ph:'예: 1/2'}] ],
-   pre:[null,'CIRC','FRAC'],   // 🧩 힌트마다 필요한 선수지식 (units/_prereq.js)
+   pre:[null,'AREA','FRAC'],   // 🧩 힌트마다 필요한 선수지식 (units/_prereq.js)
    sol:`원의 둘레 = 2${PI} × 8 = 16${PI} (cm), 원의 넓이 = ${PI} × 8² = 64${PI} (cm²)<br>${FR('135','360')} = ${FR(3,8)} 이므로 부채꼴은 원의 ${FR(3,8)} 조각이에요.<br>호의 길이 = 16${PI} × ${FR(3,8)} = <b>6${PI} cm</b>, 넓이 = 64${PI} × ${FR(3,8)} = <b>24${PI} cm²</b>`,
    rule:`부채꼴 = 원의 ${FR('(중심각)','360')} 조각`,
    causes:[{k:'p2-formula', label:'원의 둘레·넓이 공식이 헷갈렸어요', short:'원 공식', cat:'concept', h:1}, {k:'p2-part', label:'부채꼴이 원의 (중심각/360) 조각인 걸 몰랐어요', short:'몇 분의 몇 조각', cat:'concept', h:2}, {k:'p2-reduce', label:'135/360을 약분하거나 곱하다가 실수했어요', short:'약분·계산', cat:'calc', h:2}, {k:'p2-pi', label:'π나 단위(cm, cm²)를 빼먹었어요', short:'π·단위', cat:'calc', h:2}]
@@ -185,7 +185,7 @@ const PROBLEMS = [
      `마지막 부채꼴 CEF의 반지름과 중심각은? 세 부채꼴의 넓이를 더하세요. 풀이 과정을 쓰는 것도 잊지 마세요!`
    ],
    checks:[ [{l:'∠DAC',a:120,u:'°'}], [{l:'부채꼴 DAC의 넓이',a:3,u:'π cm²'}], [{l:'부채꼴 BDE의 반지름',a:6,u:'cm'}], [{l:'세 넓이의 합',a:42,u:'π cm²'}] ],
-   pre:['LINE','CIRC',null,null],   // 🧩 힌트마다 필요한 선수지식 (units/_prereq.js)
+   pre:['LINE','AREA',null,null],   // 🧩 힌트마다 필요한 선수지식 (units/_prereq.js)
    sol:`세 부채꼴의 중심각은 모두 180° − 60° = 120° → 원의 ${FR(1,3)}<br>반지름: ${OV('AC')} = 3, ${OV('BD')} = 3 + 3 = 6, ${OV('CE')} = 3 + 6 = 9 (cm)<br>넓이 = ${FR(1,3)}(9${PI} + 36${PI} + 81${PI}) = 3${PI} + 12${PI} + 27${PI} = <b>42${PI} cm²</b>`,
    rule:`부채꼴마다 [반지름, 중심각]을 표로 정리하고 더한다`,
    causes:[{k:'p6-angle', label:'세 부채꼴의 중심각이 120°인 걸 못 찾았어요', short:'중심각 120°', cat:'idea', h:0}, {k:'p6-radius', label:'반지름이 3, 6, 9 cm로 커지는 걸 몰랐어요', short:'반지름 3·6·9', cat:'idea', h:2}, {k:'p6-formula', label:'부채꼴의 넓이 공식이 헷갈렸어요', short:'넓이 공식', cat:'concept', h:1}, {k:'p6-calc', label:'세 넓이를 더하다가 계산을 실수했어요', short:'계산', cat:'calc', h:3}]

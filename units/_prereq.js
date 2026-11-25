@@ -31,6 +31,34 @@ function tape(parts, o={}){
 /* 반지름 r인 원 */
 function circleR(r,u=' cm'){ const c=[110,105], R=78, P=pol(c,R,20);
   return sv(220,210,`<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="#eef4ff" stroke="#111" stroke-width="2.6"/>${ln(c,P)}${dot(c)}${T(c[0]-14,c[1]+16,'O',{size:20})}${T((c[0]+P[0])/2+4,(c[1]+P[1])/2-14,r+u,{size:19})}`); }
+/* 지름이 그려진 원 (반지름도 표시할 수 있음) */
+function circleD(dl,rl){ const c=[130,105], R=80, A=pol(c,R,180), B=pol(c,R,0);
+  return sv(260,200,`<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="#eef4ff" stroke="#111" stroke-width="2.6"/><line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="${C[1]}" stroke-width="5" stroke-linecap="round"/>${dot(c)}`
+    +(dl?T(c[0],c[1]-18,dl,{size:19}):'')+(rl?T((c[0]+B[0])/2,c[1]+20,rl,{size:17}):'')); }
+/* 둘레를 쭉 펴면 지름 3개와 조금 더 (π배) */
+function unroll(){ const d=150, c=[95,90], R=d/2, y=215, x0=20, L=d*Math.PI; let s='';
+  s+=`<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="none" stroke="${C[0]}" stroke-width="5"/>`+`<line x1="${c[0]-R}" y1="${c[1]}" x2="${c[0]+R}" y2="${c[1]}" stroke="${C[1]}" stroke-width="5" stroke-linecap="round"/>`+T(c[0],c[1]-16,'지름',{size:17});
+  s+=T(330,40,'둘레를 쭉 펴면',{size:18})+`<path d="M ${c[0]+R+12} ${c[1]+40} Q 220 ${y-20} 250 ${y-14}" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5 5"/>`;
+  s+=`<line x1="${x0}" y1="${y}" x2="${x0+L}" y2="${y}" stroke="${C[0]}" stroke-width="6" stroke-linecap="round"/>`;
+  for(let i=0;i<3;i++){ const a=x0+i*d; s+=`<rect x="${a+1}" y="${y+10}" width="${d-2}" height="22" rx="5" fill="${C[1]}" fill-opacity="${i%2?.35:.6}"/>`+T(a+d/2,y+21,'지름 '+(i+1),{size:15}); }
+  s+=`<rect x="${x0+3*d+1}" y="${y+10}" width="${L-3*d-1}" height="22" rx="4" fill="${C[3]}" fill-opacity=".7"/>`+T(x0+3*d+(L-3*d)/2,y+48,'조금 더',{size:14});
+  s+=T(x0+L/2,y+74,'둘레 = 지름 × 3.14… = 지름 × π',{size:19});
+  return sv(530,300,s); }
+/* 원 넓이: 원을 n조각으로 쪼개기 (위 반쪽·아래 반쪽 색을 다르게) */
+function cutFig(n=16){ const c=[110,110], R=85; let s='';
+  for(let i=0;i<n;i++){ const a0=i*360/n, a1=(i+1)*360/n, P=pol(c,R,a0), Q=pol(c,R,a1);
+    s+=`<path d="M ${c[0]} ${c[1]} L ${P[0]} ${P[1]} A ${R} ${R} 0 0 0 ${Q[0]} ${Q[1]} Z" fill="${i<n/2?C[0]:C[1]}" fill-opacity=".45" stroke="#fff" stroke-width="2"/>`; }
+  return sv(220,220,s+`<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="none" stroke="#111" stroke-width="2"/>`); }
+/* 조각을 지그재그로 붙여 거의 직사각형 */
+function zigFig(lab){ const n=16, R=85, h=Math.PI/n, sx=R*Math.sin(h), cy=R*Math.cos(h), x0=130, B=60+R; let s='';
+  const piece=(ax,ay,e1,e2,up,col)=>`<path d="M ${ax} ${ay} L ${e1[0]} ${e1[1]} A ${R} ${R} 0 0 ${up?1:0} ${e2[0]} ${e2[1]} Z" fill="${col}" fill-opacity=".45" stroke="#fff" stroke-width="2"/>`;
+  for(let k=0;k<n/2;k++){ const cx=x0+sx+2*k*sx;
+    s+=piece(cx,B,[cx-sx,B-cy],[cx+sx,B-cy],true,C[0]);                      // 위로 볼록 (원의 위 반쪽)
+    s+=piece(cx+sx,B-cy,[cx,B],[cx+2*sx,B],false,C[1]); }                    // 아래로 볼록 (원의 아래 반쪽)
+  const W=n*sx, L=x0, Rt=x0+W+sx, top=B-R, bot=B-cy+R;
+  if(lab){ s+=`<path d="M ${L} ${top-10} v -8 H ${Rt} v 8" fill="none" stroke="#111" stroke-width="2"/>`+T((L+Rt)/2,top-34,'가로 = 둘레의 반 = 반지름 × π',{size:18});
+    s+=`<path d="M ${L-12} ${top+4} h -8 V ${B} h 8" fill="none" stroke="#111" stroke-width="2"/>`+T(L-26,(top+B)/2,'세로',{size:16,anchor:'end'})+T(L-26,(top+B)/2+20,'= 반지름',{size:16,anchor:'end'}); }
+  return sv(Rt+30,bot+20,s); }
 /* 원을 n조각, 그중 m조각 칠함 */
 function pie(n,m){ const c=[110,105], R=82; let s='';
   for(let i=0;i<n;i++){ const a0=90-i*360/n, a1=90-(i+1)*360/n, P=pol(c,R,a0), Q=pol(c,R,a1);
@@ -76,14 +104,23 @@ RATIO:{ name:'비례배분', icon:'🍬',
     const what=deg?`원 한 바퀴 <b>360°</b>`:`사탕 <b>${tot}개</b>`;
     return {q:`${what}를 <b>${r.join(' : ')}</b>로 나누면 <b>${ordK[j]}</b> 몫은?`, a:r[j]*k, u,
       sol:`칸 수 ${r.join(' + ')} = ${n} → 한 칸 ${tot}${deg?'°':''} ÷ ${n} = ${k}${u} → ${ordK[j]} 몫 ${r[j]} × ${k} = <b>${r[j]*k}${u}</b>`}; } },
-CIRC:{ name:'원의 둘레와 넓이', icon:'⭕',
+CIRC:{ name:'원의 둘레와 π', icon:'⭕',
   lesson:[
-    `반지름이 <i>r</i>인 원에서<br>${big(M('(\\text{둘레}) = 2 \\times \\pi \\times r = 2\\pi r'))}`+circleR('r',''),
-    `${big(M('(\\text{넓이}) = \\pi \\times r \\times r = \\pi r^{2}'))}반지름을 <b>두 번</b> 곱해요. (2를 곱하는 게 아니에요!)`,
-    `예) 반지름 8 cm<br>둘레 = 2 × π × 8 = <b>16π cm</b><br>넓이 = π × 8 × 8 = <b>64π cm²</b><br><span class="muted">π는 그대로 두고 숫자만 계산해요.</span>`],
-  gen(){ const r=ri(2,12), area=Math.random()<.55;
-    return {q:`반지름이 <b>${r} cm</b>인 원의 <b>${area?'넓이':'둘레'}</b>는?`, fig:circleR(r), a:area?r*r:2*r, u:area?'π cm²':'π cm', ph:area?'예: 9π':'예: 6π',
-      sol: area?`π × ${r} × ${r} = <b>${r*r}π cm²</b>`:`2 × π × ${r} = <b>${2*r}π cm</b>`}; } },
+    `원의 둘레를 쭉 펴서 <b>지름</b>과 비교해 보면, 둘레는 지름의 <b>3배보다 조금 더</b> (약 3.14배)예요.<br><span class="muted">작은 원이든 큰 원이든 항상 똑같아요!</span>`+unroll(),
+    `이 3.14…를 <b>π(파이)</b>라고 해요.<br>π는 <b>지름을 둘레로 바꾸는 마법의 수</b> 🪄${big(M('(\\text{둘레}) = (\\text{지름}) \\times \\pi'))}`,
+    `반지름만 알 때는? 먼저 <b>지름</b>을 구해요. (지름 = 반지름 × 2)<br>예) 반지름 8 cm → 지름 16 cm → 둘레 = 16 × π = <b>16π cm</b><br><span class="muted">π는 그대로 두고 숫자만 계산해요.</span>`+circleD('지름 16 cm','8 cm')],
+  gen(){ const r=ri(2,12), d=2*r;
+    if(Math.random()<.4) return {q:`지름이 <b>${d} cm</b>인 원의 <b>둘레</b>는?`, fig:circleD(d+' cm',''), a:d, u:'π cm', ph:'예: 6π', sol:`둘레 = 지름 × π = <b>${d}π cm</b>`};
+    return {q:`반지름이 <b>${r} cm</b>인 원의 <b>둘레</b>는?`, fig:circleR(r), a:d, u:'π cm', ph:'예: 6π', sol:`지름 = ${r} × 2 = ${d} cm → 둘레 = 지름 × π = <b>${d}π cm</b>`}; } },
+AREA:{ name:'원의 넓이', icon:'🟠',
+  lesson:[
+    `넓이는 <b>직사각형</b>이면 쉬워요. (가로 × 세로)<br>그럼 원을 직사각형으로 바꿔 볼까요? 먼저 원을 똑같이 <b>잘게 쪼개요</b>.`+cutFig(),
+    `조각을 <b>위아래 번갈아(지그재그)</b> 붙이면 거의 <b>직사각형</b>이 돼요!<br><span class="muted">더 잘게 쪼갤수록 진짜 직사각형에 가까워져요.</span>`+zigFig(false),
+    `<b>가로</b>는 원의 둘레의 반(반둘레), <b>세로</b>는 반지름이에요.<br>반둘레 = 지름 × π ÷ 2 = <b>반지름 × π</b>`+zigFig(true),
+    `그래서${big(M('(\\text{넓이}) = (\\text{반지름} \\times \\pi) \\times \\text{반지름} = \\pi \\times r \\times r'))}예) 반지름 8 cm → π × 8 × 8 = <b>64π cm²</b><br><span class="muted">넓이에는 지름이 아니라 반지름! 반지름을 두 번 곱해요.</span>`],
+  gen(){ const r=ri(2,12), d=2*r;
+    if(Math.random()<.3) return {q:`지름이 <b>${d} cm</b>인 원의 <b>넓이</b>는?`, fig:circleD(d+' cm',''), a:r*r, u:'π cm²', ph:'예: 9π', sol:`넓이에는 반지름! 반지름 = ${d} ÷ 2 = ${r} cm → π × ${r} × ${r} = <b>${r*r}π cm²</b>`};
+    return {q:`반지름이 <b>${r} cm</b>인 원의 <b>넓이</b>는?`, fig:circleR(r), a:r*r, u:'π cm²', ph:'예: 9π', sol:`(반지름 × π) × 반지름 = π × ${r} × ${r} = <b>${r*r}π cm²</b>`}; } },
 FRAC:{ name:'몇 분의 몇 (약분)', icon:'🍕',
   lesson:[
     `135°는 360°의 몇 분의 몇일까요? 먼저 분수로 써요.${big(FR('135','360'))}`,
