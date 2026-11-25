@@ -66,7 +66,7 @@ function bbAuto(){
 /* ---------- 행동 ---------- */
 function bbCode(){ return String(1000+Math.floor(Math.random()*9000)); }
 function bbCreate(){
-  if(!CL.base||!CFG.bb) return; const room=bbCode();
+  if(!CL.base||!bbOpen()) return; const room=bbCode();
   bbRef0(room).once('value').then(s=>{ if(s.exists()) return bbCreate();
     const t=Date.now(); return bbRef0(room).update({t, a:{uid:CL.uid, name:myName(), at:TS}}).then(()=>{ BB={room, side:'a', t, inp:'', cross:{}, d:null}; bbSave(); render(); }); })
   .catch(e=>toast(isDenied(e)?'아직 숫자야구를 쓸 수 없어요. 선생님께 알려 주세요 (데이터베이스 규칙 업데이트 필요)':'방을 만들지 못했어요: '+e.message,5000));
@@ -114,13 +114,53 @@ function bbPhase(){
   return 'play';
 }
 function bbTiles(g,r){ return `<span class="bbt">${g.split('').map((c,i)=>`<i class="${r?r[i]:'w'}">${c}${r?`<s>${BBSYM[r[i]]}</s>`:''}</i>`).join('')}</span>`; }
-function bbPad(){ return `<div class="bbkeys">${BB_DIG.map(n=>`<button onclick="bbKey(${n})">${n}</button>`).join('')}<button class="ghost" onclick="bbBack()">⌫</button></div>`; }
-function bbCand(){ let h=`<div class="bbcand"><span></span>${BB_DIG.map(n=>`<b>${n}</b>`).join('')}`;
-  for(const a of BB_DIG){ h+=`<b>${a}</b>`; for(const b of BB_DIG){ const c=''+a+b; h+= a===b?`<i class="no"></i>`:`<button class="${BB.cross[c]?'x':''}" onclick="bbCross('${c}')">${c}</button>`; } }
-  const left=BB_DIG.length*(BB_DIG.length-1)-Object.values(BB.cross).filter(Boolean).length;
+function bbPad(k='bbKey',bk='bbBack'){ return `<div class="bbkeys">${BB_DIG.map(n=>`<button onclick="${k}(${n})">${n}</button>`).join('')}<button class="ghost" onclick="${bk}()">⌫</button></div>`; }
+function bbCand(cross,fn='bbCross'){ cross=cross||BB.cross; let h=`<div class="bbcand"><span></span>${BB_DIG.map(n=>`<b>${n}</b>`).join('')}`;
+  for(const a of BB_DIG){ h+=`<b>${a}</b>`; for(const b of BB_DIG){ const c=''+a+b; h+= a===b?`<i class="no"></i>`:`<button class="${cross[c]?'x':''}" onclick="${fn}('${c}')">${c}</button>`; } }
+  const left=BB_DIG.length*(BB_DIG.length-1)-Object.values(cross).filter(Boolean).length;
   return h+`</div><div class="muted" style="font-size:14px;margin-top:4px">아닌 숫자를 눌러 지워요 · 남은 후보 ${left}가지</div>`; }
+/* 학생별 열기/닫기: 선생님이 이 학생만 따로 정했으면 그것, 아니면 반 전체 설정 */
+function bbOpen(){ const o=(CFG.bbS||{})[CL.key]; return o===1?true:o===0?false:!!CFG.bb; }
+
+/* ---------- 🤖 컴퓨터와 혼자 연습 (포인트 없음, 서버에 아무것도 안 씀) ---------- */
+let SOLO=null;   // {lv, sec, csec, g:[], cg:[], inp, cross, done}
+const BB_ALL=[]; for(const a of BB_DIG) for(const b of BB_DIG) if(a!==b) BB_ALL.push(''+a+b);
+const SOLO_LV={weak:'약함 · 아무 숫자나', mid:'보통 · 가능한 숫자 중에서', strong:'강함 · 가장 잘 줄이는 숫자'};
+function soloStart(lv){ SOLO={lv, sec:'', csec:ULIB.rnd(BB_ALL), g:[], cg:[], inp:'', cross:{}, done:null, setup:true}; render(); }
+function soloKey(n){ if(!SOLO||SOLO.done) return; const f=SOLO.setup?'sec':'inp'; if(SOLO[f].includes(String(n))||SOLO[f].length>=2) return; SOLO[f]+=n; render(); }
+function soloBack(){ if(!SOLO) return; const f=SOLO.setup?'sec':'inp'; SOLO[f]=SOLO[f].slice(0,-1); render(); }
+function soloCross(c){ SOLO.cross[c]=!SOLO.cross[c]; render(); }
+function soloCands(){ return BB_ALL.filter(c=>SOLO.cg.every(x=>bbJudge(c,x.g)===x.r)); }
+function soloPick(){ const lv=SOLO.lv, used=new Set(SOLO.cg.map(x=>x.g)), cand=soloCands();
+  if(lv==='weak') return ULIB.rnd(BB_ALL.filter(c=>!used.has(c)));
+  if(lv==='mid'||cand.length<=2) return ULIB.rnd(cand);
+  let best=null, bs=1e9; for(const g of BB_ALL){ if(used.has(g)) continue; const part={}; for(const c of cand){ const r=bbJudge(c,g); part[r]=(part[r]||0)+1; }
+    const worst=Math.max(...Object.values(part))-(cand.includes(g)?0.5:0); if(worst<bs){ bs=worst; best=g; } } return best; }
+function soloGuess(){ if(!SOLO||SOLO.inp.length!==2||SOLO.done) return;
+  const g=SOLO.inp; SOLO.inp=''; SOLO.g.push({g, r:bbJudge(SOLO.csec,g)});
+  const cg=soloPick(); SOLO.cg.push({g:cg, r:bbJudge(SOLO.sec,cg)});
+  const k=SOLO.g.length, me=SOLO.g[k-1].r==='OO', cp=SOLO.cg[k-1].r==='OO';
+  if(me||cp||k>=BB_ROUNDS) SOLO.done= me&&cp?'draw': me?'win': cp?'lose':'draw';
+  render(); }
+function viewSolo(){
+  let h=`<div class="phase-h">🤖 컴퓨터와 연습 <span class="muted" style="font-size:16px;font-weight:700">${SOLO_LV[SOLO.lv]} · 포인트 없음</span></div><div class="bbboard">`;
+  if(SOLO.setup){ h+=`<div style="font-weight:900">내 비밀 숫자 2개 (컴퓨터도 내 숫자를 맞히려고 해요)</div><div style="text-align:center;margin:8px 0">${bbTiles(SOLO.sec.padEnd(2,'·'),null)}</div>${bbPad('soloKey','soloBack')}
+      <div class="next"><button class="acc" ${SOLO.sec.length===2?'':'disabled'} onclick="SOLO.setup=false;render()">시작</button><button class="ghost" onclick="SOLO=null;render()">나가기</button></div>`; return h+`</div>`; }
+  const rows=SOLO.g.map((x,i)=>`<tr><td class="k">${i+1}회</td><td>${bbTiles(x.g,x.r)}</td><td>${bbTiles(SOLO.cg[i].g,SOLO.cg[i].r)}</td></tr>`).join('');
+  h+=`<div class="bbvs">${esc(myName())} <span>vs</span> 🤖 · 내 비밀 숫자 ${bbTiles(SOLO.sec,null)}</div><table class="bbtab"><tr><th></th><th>내 추측</th><th>🤖의 추측</th></tr>${rows}</table>`;
+  if(!SOLO.done){ const K=SOLO.g.length+1;
+    h+=`<div style="font-weight:900;margin-top:8px">${K}회 추측</div><div style="text-align:center;margin:6px 0">${bbTiles(SOLO.inp.padEnd(2,'·'),null)}</div>${bbPad('soloKey','soloBack')}<div class="next"><button class="acc" ${SOLO.inp.length===2?'':'disabled'} onclick="soloGuess()">추측 보내기</button></div>
+      <details class="bbdet" open><summary>📋 후보 표 (30가지)</summary>${bbCand(SOLO.cross,'soloCross')}</details>
+      <div class="muted" style="font-size:14px;margin-top:6px">💭 컴퓨터에게 남은 내 숫자 후보: ${soloCands().length}가지</div><div class="next"><button class="ghost" onclick="SOLO=null;render()">그만하기</button></div>`; }
+  else { const msg={win:`🎉 ${SOLO.g.length}회 만에 맞혔어요. 승리!`, lose:'🤖가 먼저 맞혔어요.', draw:SOLO.g.length>=BB_ROUNDS&&!SOLO.g.some(x=>x.r==='OO')?'10회 안에 아무도 못 맞혔어요. 무승부!':'같은 회에 둘 다 맞혔어요. 무승부!'}[SOLO.done];
+    h+=`<div class="verdict ${SOLO.done==='win'?'r':SOLO.done==='lose'?'w':''}" style="margin-top:10px">${msg}</div><div>🤖의 비밀 숫자: ${bbTiles(SOLO.csec,null)}</div>
+      <div class="next"><button class="acc" onclick="soloStart('${SOLO.lv}')">한 번 더</button><button class="ghost" onclick="SOLO=null;render()">숫자야구 처음으로</button></div>`; }
+  return h+`</div>`;
+}
+
 function viewBB(){
-  if(!CFG.bb&&!BB) return `<div class="phase-h">⚾ 숫자야구</div><div class="card"><div class="muted">선생님이 숫자야구를 닫았어요.</div></div>`;
+  if(SOLO&&bbOpen()) return viewSolo();
+  if(!bbOpen()&&!BB) return `<div class="phase-h">⚾ 숫자야구</div><div class="card"><div class="muted">선생님이 숫자야구를 닫았어요.</div></div>`;
   const ph=bbPhase(), bal=bbBalance(), mx=+CFG.bbMax||0;
   let h=`<div class="phase-h">⚾ 숫자야구 <span class="muted" style="font-size:16px;font-weight:700">하 · 1~6 · 2자리</span></div>`;
   h+=`<div class="phase-d">⭐ 내 포인트 <b>${bal}</b>점 · 한 판 최대 <b>${mx}</b>점 걸기. 진 사람 포인트가 이긴 사람에게 가요.</div><div class="bbboard">`;
@@ -131,6 +171,7 @@ function viewBB(){
     h+=`<div class="next"><button class="acc" onclick="bbCreate()">➕ 방 만들기</button>
       <input id="bbJoin" class="bbin" inputmode="numeric" maxlength="4" placeholder="방 코드" value="${esc(BBL.join)}" oninput="BBL.join=this.value"><button onclick="bbJoin($('bbJoin').value)">들어가기</button></div>`;
     h+=`<div style="margin-top:10px;font-weight:900">기다리는 방</div>${open.length?open.map(([r,d])=>`<div class="bbroom"><span>${esc(d.a.name)}의 방 <span class="muted">${r}</span></span><button onclick="bbJoin('${r}')">들어가기</button></div>`).join(''):'<div class="muted">아직 없어요. 방을 만들어 친구에게 코드를 알려 주세요.</div>'}`;
+    h+=`<div style="margin-top:16px;font-weight:900">🤖 혼자 연습하기 <span class="muted" style="font-weight:400;font-size:14px">(컴퓨터와 대결 · 포인트 없음)</span></div><div class="gpick" style="justify-content:flex-start;margin-top:6px">${Object.entries(SOLO_LV).map(([k,t])=>`<button onclick="soloStart('${k}')">${t.split(' · ')[0]}</button>`).join('')}</div><div class="muted" style="font-size:13px">약함: 아무 숫자나 · 보통: 가능한 숫자 중에서 · 강함: 가장 잘 줄이는 숫자</div>`;
   }
   else if(ph==='wait') h+=`<div style="text-align:center"><div class="muted">방 코드</div><div class="bbcode">${BB.room}</div><div>친구가 들어오기를 기다리는 중… 친구에게 방 코드를 알려 주세요.</div><div class="next" style="justify-content:center"><button class="ghost" onclick="bbQuit()">방 닫기</button></div></div>`;
   else if(ph==='setup'){ const me=BB.d[BB.side]||{}, op=BB.d[bbOther(BB.side)];

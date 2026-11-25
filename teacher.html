@@ -177,7 +177,7 @@ table.mx td.ok{background:var(--o-soft)} table.mx td.bad{background:var(--x-soft
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.5;            // index.html 과 같은 값이어야 함
+const APP_VER=20261125.6;            // index.html 과 같은 값이어야 함
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 새로고침해 보고, 그래도 안 되면 저장소의 units 폴더(단원 파일, _lib.js, list.js)를 확인하세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, G=U.groups, BT=U.basicTypes;
 const PBY=Object.fromEntries(P.map(p=>[p.id,p])), TBY=Object.fromEntries(TW.map(t=>[t.id,t])), TOF=Object.fromEntries(TW.map(t=>[t.of,t])), BBY=Object.fromEntries(BT.map(b=>[b.k,b]));
@@ -189,7 +189,7 @@ function toast(m,ms=2400){const t=$('toast');t.textContent=m;t.classList.add('on
 const MK={o:'○',t:'△',x:'×'}, CN=Object.fromEntries(CAUSE.concat(...P.map(p=>p.causes||[])).map(c=>[c.k,c.short])), NUM='①②③④';
 const STALL_MIN=5;   // 이 시간(분) 동안 진행이 없으면 '도울 학생'에 표시
 const SKEY='ur-t2-'+U.id;
-const DEF={code:null, fig:'csat', lesson:'review', mix:0, game:0, bb:0, bbMax:10, bbLog:[], wait:30, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0, ack:{}};
+const DEF={code:null, fig:'csat', lesson:'review', mix:0, game:0, bb:0, bbS:{}, bbMax:10, bbLog:[], wait:30, mode:{}, paused:false, pauseMsg:'선생님을 봐 주세요', recs:{}, view:'help', resetAt:0, ack:{}};
 let S=Object.assign({},DEF,LS.get(SKEY,{}));
 function save(){ LS.set(SKEY,S); }
 function newCode(){ return String(Math.floor(1000+Math.random()*9000)); }
@@ -213,7 +213,7 @@ const FB_OK=!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CON
 let db=null, base=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
 const fbKey=n=>encodeURIComponent(n).replace(/\./g,'%2E');
 const fbName=k=>{ try{ return decodeURIComponent(k); }catch(e){ return k; } };
-function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({lesson:S.lesson==='first'?'first':'review', mix:+S.mix||0, game:S.game===1?1:0, bb:S.bb===1?1:0, bbMax:+S.bbMax||0, fig:S.fig==='bold'?'bold':'csat', wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, unit:U.id, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
+function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set({lesson:S.lesson==='first'?'first':'review', mix:+S.mix||0, game:S.game===1?1:0, bb:S.bb===1?1:0, bbS:S.bbS||{}, bbMax:+S.bbMax||0, fig:S.fig==='bold'?'bold':'csat', wait:S.wait, mode:S.mode, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, unit:U.id, ver:APP_VER, t:firebase.database.ServerValue.TIMESTAMP}).catch(e=>{ $('peerErr').textContent='설정 저장 실패: '+e.message; }); }
 function pushCfg(){ save(); writeCfg(); render(); }
 
 /* ---------- 연결 ---------- */
@@ -249,8 +249,8 @@ function openClass(tries=0){
 /* 서버 설정을 이 화면에 반영. 바뀐 게 있으면 true */
 function adoptCfg(c){
   if(!c) return false;
-  const n={lesson:c.lesson==='first'?'first':'review', mix:+c.mix||0, game:c.game===1?1:0, bb:c.bb===1?1:0, bbMax:c.bbMax!=null?+c.bbMax||0:S.bbMax, fig:c.fig==='bold'?'bold':'csat', wait:c.wait!=null?Math.max(0,+c.wait||0):S.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||S.pauseMsg, resetAt:Math.max(+c.resetAt||0,S.resetAt||0)};
-  const cur={lesson:S.lesson||'review', mix:+S.mix||0, game:S.game===1?1:0, bb:S.bb===1?1:0, bbMax:+S.bbMax||0, fig:S.fig||'csat', wait:S.wait,mode:S.mode,paused:S.paused,pauseMsg:S.pauseMsg,resetAt:S.resetAt||0};
+  const n={lesson:c.lesson==='first'?'first':'review', mix:+c.mix||0, game:c.game===1?1:0, bb:c.bb===1?1:0, bbS:c.bbS||{}, bbMax:c.bbMax!=null?+c.bbMax||0:S.bbMax, fig:c.fig==='bold'?'bold':'csat', wait:c.wait!=null?Math.max(0,+c.wait||0):S.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||S.pauseMsg, resetAt:Math.max(+c.resetAt||0,S.resetAt||0)};
+  const cur={lesson:S.lesson||'review', mix:+S.mix||0, game:S.game===1?1:0, bb:S.bb===1?1:0, bbS:S.bbS||{}, bbMax:+S.bbMax||0, fig:S.fig||'csat', wait:S.wait,mode:S.mode,paused:S.paused,pauseMsg:S.pauseMsg,resetAt:S.resetAt||0};
   if(JSON.stringify(n)===JSON.stringify(cur)) return false;
   if(n.resetAt>(S.resetAt||0)) S.recs={};   // 다른 화면에서 초기화함
   Object.assign(S,n); save(); $('pauseMsg').value=S.pauseMsg; figApply(); lessonApply(); return true;
@@ -276,7 +276,7 @@ function joinExisting(){
     const c=snap.val()||{};
     if(c.unit && c.unit!==U.id){ const u=UNITS.find(x=>x.id===c.unit); toast(`이 수업은 '${u?u.title:c.unit}' 단원이에요. 위에서 단원을 바꾼 뒤 다시 가져오세요.`,6000); return; }
     if(base){ try{ base.child('stu').off(); base.child('cfg').off(); base.child('games').off(); base.child('bank').off(); }catch(e){} }
-    S=Object.assign({},DEF,{code,key,view:S.view,recs:{}, lesson:c.lesson==='first'?'first':'review', mix:+c.mix||0, game:c.game===1?1:0, bb:c.bb===1?1:0, bbMax:c.bbMax!=null?+c.bbMax||0:DEF.bbMax, fig:c.fig==='bold'?'bold':'csat', wait:c.wait!=null?Math.max(0,+c.wait||0):DEF.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||DEF.pauseMsg, resetAt:+c.resetAt||0});
+    S=Object.assign({},DEF,{code,key,view:S.view,recs:{}, lesson:c.lesson==='first'?'first':'review', mix:+c.mix||0, game:c.game===1?1:0, bb:c.bb===1?1:0, bbS:c.bbS||{}, bbMax:c.bbMax!=null?+c.bbMax||0:DEF.bbMax, fig:c.fig==='bold'?'bold':'csat', wait:c.wait!=null?Math.max(0,+c.wait||0):DEF.wait, mode:c.mode||{}, paused:!!c.paused, pauseMsg:c.pauseMsg||DEF.pauseMsg, resetAt:+c.resetAt||0});
     save(); figApply(); $('pauseMsg').value=S.pauseMsg; $('jCode').value=''; $('jKey').value=''; $('carryBox').classList.add('hide');
     showCode(); openClass(); render(); toast(`수업 ${code}을(를) 이어서 열었어요`,4000);
   }).catch(e=>{ toast(isDenied(e)?'코드나 열쇠가 맞지 않아요':authMsg(e),5000); });
@@ -347,10 +347,14 @@ function figApply(){ document.body.classList.toggle('fig-bold',S.fig==='bold'); 
 /* 수업 종류: 복습(지난 시간에 혼자 풀어 본 뒤) / 첫 차시(처음 풀어 봄: 도전 → 막히면 힌트) */
 function lessonApply(){ const l=S.lesson==='first'?'first':'review'; document.querySelectorAll('#lessonSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.l===l));
   const m=$('mixBtn'); if(m) m.textContent=S.mix?'🔀 섞어 풀기 닫기':'🔀 섞어 풀기 열기 (수업 끝 5분)';
-  const bb=$('bbBtn'); if(bb) bb.textContent=S.bb===1?'⚾ 숫자야구 닫기 (지금 열림)':'⚾ 숫자야구 대전 열기';
+  const bbn=Object.keys(S.bbS||{}).length, bb=$('bbBtn'); if(bb) bb.textContent=(S.bb===1?'⚾ 숫자야구 모두 닫기 (지금 열림)':'⚾ 숫자야구 모두 열기')+(bbn?` · 학생별 ${bbn}명 따로`:'');
   const bm=$('bbMax'); if(bm) bm.value=String(S.bbMax||10);
   const g=$('gameBtn'); if(g) g.textContent=S.game===1?'🎲 주사위 게임 닫기 (지금 열림)':'🎲 주사위 게임 열기 (쉬는 시간·수업 끝)'; }
-function toggleBB(){ S.bb=S.bb===1?0:1; save(); lessonApply(); pushCfg(); toast(S.bb?'학생 화면에 ⚾ 숫자야구가 열렸어요':'숫자야구를 닫았어요 (하던 경기는 끝까지 할 수 있어요)'); }
+function toggleBB(){ S.bb=S.bb===1?0:1; S.bbS={}; save(); lessonApply(); pushCfg(); toast(S.bb?'모든 학생에게 ⚾ 숫자야구가 열렸어요':'모든 학생의 숫자야구를 닫았어요 (하던 경기는 끝까지 할 수 있어요)'); }
+/* 학생별 열기/닫기 (반 전체 설정보다 우선) */
+function bbOpenOf(n){ const o=(S.bbS||{})[fbKey(n)]; return o===1?true:o===0?false:S.bb===1; }
+function toggleBBFor(n){ const k=fbKey(n); S.bbS=Object.assign({},S.bbS); S.bbS[k]=bbOpenOf(n)?0:1; if(S.bbS[k]===(S.bb===1?1:0)) delete S.bbS[k]; save(); lessonApply(); pushCfg(); }
+function bbAllFor(v){ S.bbS={}; for(const n of roster()) if(v!==(S.bb===1)) S.bbS[fbKey(n)]=v?1:0; save(); lessonApply(); pushCfg(); }
 function toggleGame(){ S.game=S.game===1?0:1; save(); lessonApply(); pushCfg(); toast(S.game?'학생 화면에 🎲 주사위가 열렸어요':'주사위 게임을 닫았어요'); }
 function setLesson(l){ if(S.lesson===l) return; S.lesson=l; save(); lessonApply(); pushCfg(); updateMirror&&updateMirror(); toast(l==='first'?'첫 차시로 바꿨어요. 학생은 먼저 도전하고, 막히면 힌트로 가요':'복습으로 바꿨어요. 학생은 지난 시간 답으로 채점부터 해요'); }
 function toggleMix(){ S.mix=S.mix?0:now(); save(); lessonApply(); pushCfg(); toast(S.mix?'학생 화면에 섞어 풀기가 열렸어요':'섞어 풀기를 닫았어요'); }
@@ -539,7 +543,11 @@ function panelBB(){
   const WHY={hit:'맞힘',both:'둘 다 맞힘',ten:'10회 끝',quit:'기권',early:'시작 전 나감',abandon:'응답 없음'};
   let h=BB_RULES_OLD?`<div class="lockmsg" style="margin-bottom:10px">⚠ 데이터베이스 규칙이 옛 버전이라 숫자야구를 쓸 수 없어요. 저장소의 <b>database.rules.json</b> 내용을 Firebase 콘솔 → Realtime Database → 규칙에 붙여 넣고 [게시]하세요.</div>`:'';
   h+=`<div class="tool"><span class="muted">하 단계(1~6 · 2자리 · ○△×). 두 학생이 고른 금액 중 작은 쪽(한 판 최대 ${S.bbMax}점, 둘의 보유 포인트 이하)이 걸리고, 진 사람 포인트가 이긴 사람에게 가요. 경기가 끝나면 이 화면이 두 사람의 비밀 숫자로 모든 판정을 다시 확인한 뒤 정산해요 — <b>이 화면이 열려 있어야 정산돼요.</b> 같은 친구와 연속 3판이 넘으면 연습 경기.</span></div>`;
-  h+=`<h3 style="margin:10px 0 6px">지금 경기 ${live.length}개</h3>${live.length?live.map(([r,d])=>{ const o=bbOutcome(d); return `<span class="chip">${r} · ${esc(d.a?d.a.name:'')} vs ${esc(d.b?d.b.name:'(기다림)')} · ${!d.b?'기다리는 중':!(d.a.ready&&d.b.ready)?'준비 중':o.done?'정산 대기':o.k+'회'}</span>`; }).join(' '):'<span class="muted">없음</span>'}`;
+  const nm=roster(), openN=nm.filter(bbOpenOf).length;
+  h+=`<h3 style="margin:10px 0 6px">학생별 열기/닫기 <span class="muted" style="font-weight:400;font-size:14px">${openN} / ${nm.length}명 열림 · 이름을 눌러 바꿔요</span></h3>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${nm.map(n=>`<button class="sm ${bbOpenOf(n)?'':'ghost'}" style="${bbOpenOf(n)?'background:#1f4a35':''}" onclick="toggleBBFor('${esc(n).replace(/'/g,"\\'")}')">${bbOpenOf(n)?'⚾':'🔒'} ${esc(n)}</button>`).join('')||'<span class="muted">아직 학생이 없어요</span>'}</div>
+    <div style="margin-top:6px"><button class="ghost sm" onclick="bbAllFor(true)">모두 열기</button> <button class="ghost sm" onclick="bbAllFor(false)">모두 닫기</button></div>`;
+  h+=`<h3 style="margin:14px 0 6px">지금 경기 ${live.length}개</h3>${live.length?live.map(([r,d])=>{ const o=bbOutcome(d); return `<span class="chip">${r} · ${esc(d.a?d.a.name:'')} vs ${esc(d.b?d.b.name:'(기다림)')} · ${!d.b?'기다리는 중':!(d.a.ready&&d.b.ready)?'준비 중':o.done?'정산 대기':o.k+'회'}</span>`; }).join(' '):'<span class="muted">없음</span>'}`;
   const rows=Object.keys(st).filter(n=>st[n].w+st[n].l+st[n].d||bankOf(n)).sort((x,y)=>x.localeCompare(y,'ko',{numeric:true}));
   h+=`<h3 style="margin:14px 0 6px">학생별</h3>${rows.length?`<div style="overflow-x:auto"><table class="mx"><tr><th>학생</th><th>승</th><th>패</th><th>무</th><th>대전 손익</th><th>보유 포인트</th></tr>${rows.map(n=>`<tr><td class="nm">${esc(n)}</td><td>${st[n].w}</td><td>${st[n].l}</td><td>${st[n].d}</td><td>${bankOf(n)>0?'+':''}${bankOf(n)}</td><td><b>${balOf(n)}</b></td></tr>`).join('')}</table></div>`:'<span class="muted">아직 끝난 경기가 없어요.</span>'}`;
   h+=`<h3 style="margin:14px 0 6px">최근 경기</h3>${S.bbLog.length?`<div style="overflow-x:auto"><table class="mx"><tr><th>시각</th><th>경기</th><th>결과</th><th>포인트</th></tr>${S.bbLog.slice(-30).reverse().map(g=>{ const dt=new Date(g.at); return `<tr><td>${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}</td><td>${esc(g.a)} vs ${esc(g.b)}</td><td>${g.w==='draw'?'무승부':esc(g.w)+' 승'} · ${WHY[g.why]||''}${g.k?' '+g.k+'회':''}</td><td>${g.stake?g.stake+'점':esc(g.note||'0')}</td></tr>`; }).join('')}</table></div>`:'<span class="muted">없음</span>'}`;
