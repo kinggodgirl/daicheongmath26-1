@@ -19,5 +19,5 @@ window.UNITS = [
   try{ localStorage.setItem(key, JSON.stringify(id)); }catch(e){}
   window.UNIT_ID = id;
   window.unitExists = has;
-  document.write('<script src="units/_lib.js"><\/script><script src="units/' + id + '.js"><\/script>');
+  document.write('<script src="units/_lib.js"><\/script><script src="units/_prereq.js"><\/script><script src="units/' + id + '.js"><\/script>');
 })();

@@ -134,6 +134,17 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .hchk button{padding:8px 16px}
 .hchk .hm{flex-basis:100%;font-size:14px;color:#7a5a00}
 .hdone{margin-top:8px;font-size:14px;font-weight:700;color:var(--o)}
+.prelink{margin-top:10px;padding:8px 10px;border-radius:10px;background:#f4f1fb;font-size:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.prelink.hot{background:#fff1d6;border:2px solid #f0b54a;font-size:15px;animation:pin .4s}
+.prelink .pdone{color:var(--o);font-weight:800}
+.pstep{display:flex;gap:12px;align-items:flex-start;background:#fff;border:2px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;font-size:18px;line-height:1.6;animation:pin .35s}
+@keyframes pin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+.pstep .pn{flex:none;width:30px;height:30px;border-radius:50%;background:var(--acc);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center}
+.pstep>div{flex:1;min-width:0}.pfig{margin-top:6px}.pq .pfig{margin:6px 0}
+.pmath{font-size:22px;margin:6px 0}
+.pq{background:#fff;border:2px solid var(--acc);border-radius:14px;padding:12px 14px}.pq .hl{font-weight:900;color:var(--acc);margin-bottom:6px}
+.pdots i{display:inline-block;width:10px;height:10px;border-radius:50%;background:#ddd;margin-left:4px}.pdots i.on{background:var(--acc)}
+.pend{background:#fff;border:2px solid var(--line);border-radius:14px;padding:14px}.pend.good{border-color:var(--o)}.pend .pb{font-size:22px;font-weight:900;margin-bottom:4px}
 .stg{font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;background:#eee;margin-left:6px}
 .vstage{display:flex;justify-content:center;align-items:center;min-height:300px}
 .vfig{width:min(460px,100%);height:auto}
@@ -285,7 +296,7 @@ math-field::part(virtual-keyboard-toggle){color:#7a4fb5}
 <div class="celeb" id="celeb"><div class="cbox"><div class="clot" id="clot"></div><div class="cb"></div><div class="cs"></div></div><div class="conf"></div></div>
 
 <script>
-const APP_VER=20261125.13;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.14;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, TW2=U.twins2||[], CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen, BV=U.basicVideo||{};
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
@@ -339,7 +350,7 @@ function go(v,arg){
   window.scrollTo(0,0); render();
 }
 function render(){
-  $('navList').classList.toggle('sel', UI.view==='list'||UI.view==='prob');
+  $('navList').classList.toggle('sel', UI.view==='list'||UI.view==='prob'||UI.view==='pre');
   $('navBas').classList.toggle('sel', UI.view==='bas'||UI.view==='bt'||UI.view==='vid');
   $('navGame').classList.toggle('sel', UI.view==='game'); $('navPts').classList.toggle('sel', UI.view==='pts');
   $('navGame').classList.toggle('hide', !CFG.game); $('navBB').classList.toggle('hide', !((typeof bbOpen==='function'&&bbOpen())||(typeof BB!=='undefined'&&BB))||MIRROR); $('navBB').classList.toggle('sel', UI.view==='bb'); if(UI.view==='game'&&!CFG.game&&!UI.rolling) UI.view='list'; updPts();
@@ -353,6 +364,7 @@ function render(){
   else if(UI.view==='pts') v.innerHTML=viewPts();
   else if(UI.view==='bb') v.innerHTML=viewBB();
   else if(UI.view==='vid') v.innerHTML=viewVid();
+  else if(UI.view==='pre') v.innerHTML=viewPre();
   else v.innerHTML=viewList();
   const inp=v.querySelector('input.ans'); if(inp){ inp.focus({preventScroll:true}); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') basSubmitNum(); }); }
   reportLoc(); tick();
@@ -368,6 +380,7 @@ function locText(){
     return p.no+' 해결';
   }
   if(UI.view==='bt') return '기초 '+UI.bt;
+  if(UI.view==='pre') return '🧩 '+((PRE[UI.PR&&UI.PR.k]||{}).name||'선수지식');
   if(UI.view==='vid') return '📺 영상 '+(UI.VD&&UI.VD.k);
   if(UI.view==='mix') return '섞어 풀기';
   if(UI.view==='game') return '🎲 주사위';
@@ -502,6 +515,46 @@ function viewProb(p){
 /* 새로 열린 내용이 화면 아래에 숨지 않게 그 자리로 부드럽게 옮김 */
 function reveal(sel){ requestAnimationFrame(()=>{ const els=document.querySelectorAll('#view '+sel), el=els[els.length-1]; if(!el) return;
   const r=el.getBoundingClientRect(); if(r.top<70||r.bottom>innerHeight-20) el.scrollIntoView({behavior:'smooth',block:r.height>innerHeight*0.6?'start':'center'}); }); }
+/* ---------- 🧩 선수지식: 힌트를 봐도 막히면 앞에서 배운 내용부터 (units/_prereq.js, 문제의 pre) ---------- */
+const PRE=window.PREREQ||{};
+function preOf(p,i){ const k=(p.pre||[])[i]; return k&&PRE[k]?k:null; }
+function preStat(k){ return (REC.pre||{})[k]||null; }
+function preLink(p,i){ const k=preOf(p,i); if(!k||MIRROR) return ''; const a=hintAns(p.id,i), st=preStat(k);
+  const hot=a&&!a.ok&&((a.n||0)>=1||a.gave), done=st&&st.done;
+  return `<div class="prelink ${hot&&!done?'hot':''}">🧩 ${hot&&!done?'막혔나요? 이 힌트에 필요한 기초':'필요한 기초'} <b>${PRE[k].icon||''} ${PRE[k].name}</b>${done?` <span class="pdone">익힘 ✔</span>`:''}
+    <button class="${hot&&!done?'acc':'ghost'} mini" onclick="goPre('${k}','${p.id}',${i})">${done?'다시 보기':hot?'먼저 익히고 오기 →':'익히기'}</button></div>`; }
+function goPre(k,pid,i){ if(!PRE[k]) return; vidStop(); UI.view='pre'; UI.causeFor=null; UI.PR={k,pid,i,st:0,ph:'learn',qi:0,q:null,tr:0,fin:false,ok:0,show:false};
+  if(!MIRROR){ const x=Object.assign({o:0,n:0,ok:0},preStat(k)); x.o++; REC.pre=Object.assign({},REC.pre,{[k]:x}); saveRec(); send({t:'pre',k}); }
+  window.scrollTo(0,0); render(); }
+function preBack(){ const R=UI.PR||{}; if(R.pid&&PBY[R.pid]){ go('prob',R.pid); reveal('.hcard'); } else go('list'); }
+function preNext(){ const R=UI.PR, L=PRE[R.k].lesson; if(R.st<L.length-1){ R.st++; render(); reveal('.pstep'); } else { R.ph='prac'; R.qi=0; preNewQ(); render(); reveal('.pq'); } }
+function preNewQ(){ const R=UI.PR; let q, g=0; do{ q=PRE[R.k].gen(); g++; }while(g<8&&R.q&&q.q===R.q.q); R.q=q; R.tr=0; R.fin=false; R.right=false; }
+function preCheck(){ const R=UI.PR; if(!R||R.fin||MIRROR) return; const el=document.querySelector('#view .pin'), raw=fieldVal(el).slice(0,20);
+  if(!raw){ toast('답을 적어 주세요'); return; }
+  const x=hintNum(raw), ok=x!=null&&Math.abs(x-R.q.a)<1e-6; R.tr++; R.last=raw;
+  if(!ok&&R.tr<2){ el&&el.classList.add('bad'); const m=document.querySelector('#view .pq .hm'); if(m) m.innerHTML='아직 아니에요. 위의 설명을 떠올리며 한 번 더! <span class="muted">(기회 한 번 더)</span>'; return; }
+  R.fin=true; R.right=ok; if(ok) R.ok++;
+  const st=Object.assign({o:1,n:0,ok:0},preStat(R.k)); st.n++; if(ok) st.ok++; REC.pre=Object.assign({},REC.pre,{[R.k]:st}); saveRec(); send({t:'pre',k:R.k}); render(); }
+function preGo(){ const R=UI.PR; if(R.qi<2){ R.qi++; preNewQ(); render(); reveal('.pq'); return; }
+  R.ph='end'; const st=Object.assign({},preStat(R.k)); if(R.ok>=2) st.done=true; REC.pre=Object.assign({},REC.pre,{[R.k]:st}); saveRec(); send({t:'pre',k:R.k}); render();
+  if(R.ok===3) celebrate('🧩 '+PRE[R.k].name+' 완료!','3문제 모두 맞혔어요<br>이제 힌트로 돌아가 풀어 봐요'); }
+function preAgain(){ const R=UI.PR; Object.assign(R,{ph:'prac',qi:0,ok:0,q:null}); preNewQ(); render(); }
+function viewPre(){ const R=UI.PR; if(!R||!PRE[R.k]) return viewList(); const D=PRE[R.k], L=D.lesson, p=PBY[R.pid];
+  let h=`<div class="phead"><span class="tt" style="font-size:21px;color:var(--ink)">🧩 ${D.icon||''} ${D.name}</span><button class="ghost mini" onclick="preBack()">← ${p?p.no+' 힌트로':'문제 목록으로'}</button></div>`;
+  if(p) h+=`<div class="muted" style="margin:-2px 0 10px">${p.no} 문제 힌트 ${R.i+1}에서 쓰는 기초예요. 짧게 익히고 돌아가요.</div>`;
+  const steps=n=>L.slice(0,n).map((x,j)=>`<div class="pstep"><span class="pn">${j+1}</span><div>${x}</div></div>`).join('');
+  if(R.ph==='learn') return h+steps(R.st+1)+`<div class="next"><button class="acc" onclick="preNext()">${R.st<L.length-1?'다음 ▶':'✏ 연습 3문제 풀기'}</button></div>`;
+  h+=`<div style="margin-bottom:8px"><button class="ghost mini" onclick="UI.PR.show=!UI.PR.show;render()">${R.show?'설명 접기':'📖 설명 다시 보기'}</button></div>${R.show?steps(L.length):''}`;
+  if(R.ph==='end'){ const all=R.ok===3, good=R.ok>=2;
+    return h+`<div class="pend ${good?'good':''}"><div class="pb">${all?'🎉':good?'👍':'💪'} 3문제 중 <b>${R.ok}</b>개 맞혔어요</div>
+      <div class="muted">${good?'이제 힌트로 돌아가서 다시 풀어 봐요. 방금 익힌 걸 그대로 쓰면 돼요.':'설명을 한 번 더 보고, 다시 연습해 봐요. 그래도 어려우면 손을 들어 선생님께 물어봐요.'}</div>
+      <div class="next">${p?`<button class="${good?'acc':'ghost'}" onclick="preBack()">← ${p.no} 힌트로 돌아가기</button>`:''}<button class="${good?'ghost':'acc'}" onclick="preAgain()">🔁 한 번 더 연습</button></div></div>`; }
+  const q=R.q;
+  h+=`<div class="pq"><div class="hl">연습 ${R.qi+1} / 3 <span class="pdots">${[0,1,2].map(j=>`<i class="${j<R.qi?'on':''}"></i>`).join('')}</span></div><div class="ptext">${q.q}</div>${q.fig||''}`;
+  if(!R.fin) h+=`<div class="hchk">${mfHTML('pin','',q.ph||'',`preCheck()`)} ${q.u||''} <button class="acc" onclick="preCheck()">답 확인</button><div class="hm">${R.tr?'':'답을 적고 확인을 눌러요. 기회는 두 번이에요.'}</div></div>`;
+  else h+=`<div class="hdone" style="${R.right?'':'background:#fff6d6;border-color:#e8c547;color:var(--ink)'}">${R.right?'✅ 맞았어요!':'💡 정답을 볼게요. 종이에 따라 써 봐요.'}<div style="font-weight:500;margin-top:4px">${q.sol}</div></div>
+    <div class="next"><button class="acc" onclick="preGo()">${R.qi<2?'다음 문제 ▶':'결과 보기 ▶'}</button></div>`;
+  return h+`</div>`; }
 function stuckFirst(pid){ REC.seen[pid]=true; REC.diag[pid]='t'; saveRec(); send({t:'diag',pid,v:'t'}); render(); reveal('.errpick'); }
 function seeAns(pid){ REC.seen[pid]=true; saveRec(); send({t:'seen',pid}); render(); reveal('.marks'); }
 function setDiag(pid,k){ if(k) REC.diag[pid]=k; else delete REC.diag[pid]; saveRec(); send({t:'diag',pid,v:k||null}); render(); }
@@ -509,7 +562,7 @@ function hintSection(p,s){
   const md=modeOf(p.id), lv=s.lv, n=s.n; let h='';
   if(md==='lock') return `<div class="lockmsg">🔒 선생님이 이 문제의 힌트를 잠갔어요. 함께 볼 거예요. 그동안 혼자 도전해 봐요!</div>`;
   const solShown=REC.hint[p.id]&&REC.hint[p.id].sol;
-  for(let i=0;i<lv&&i<n;i++) h+=`<div class="hcard"><div class="hl">힌트 ${i+1} / ${n} ${SAYBTN}</div><div class="htx">${p.hints[i]}</div>${hintCheckHTML(p,i,i===lv-1&&!solShown)}</div>`;
+  for(let i=0;i<lv&&i<n;i++) h+=`<div class="hcard"><div class="hl">힌트 ${i+1} / ${n} ${SAYBTN}</div><div class="htx">${p.hints[i]}</div>${hintCheckHTML(p,i,i===lv-1&&!solShown)}${preLink(p,i)}</div>`;
   if(solShown && md==='all' && UI.cover[p.id]!==1) h+=`<div class="hcard sol"><div class="hl">풀이</div>${p.sol}<div class="rule">💡 ${p.rule}</div></div>`;
   const left=waitLeft(p.id), ask=lv>0&&ckOf(p,lv-1)&&!hintOk(p.id,lv-1), gate=lv>0&&hintGate(p.id,lv-1)&&!solShown;
   const wmsg=gate?'👆 위 힌트 질문에 먼저 답해요. 맞히면 바로 열리고, 두 번 틀리면 정답을 알려 줘요':ask?`종이에 옮겨 쓰고 힌트를 다시 읽어 보세요 · ${left}초 뒤에 열 수 있어요`:`종이에 다시 풀어 보세요 · ${left}초 뒤에 열 수 있어요`;
@@ -560,6 +613,7 @@ function checkHint(pid,i){
   if(ok){ toast(hintLv(pid)<p.hints.length?'맞아요! 다음 힌트를 바로 볼 수 있어요':'맞아요! 이제 다시 풀어 봐요'); render(); reveal('.next'); return; }
   if(h.ha['h'+(i+1)].n>=tryLim(ck)){ render(); toast('정답을 보고 종이에 옮겨 써요'); return; }
   ins.forEach((x,j)=>{ x.classList.toggle('bad',!oks[j]); x.classList.toggle('good',oks[j]); });
+  { const pl=box.closest('.hcard')&&box.closest('.hcard').querySelector('.prelink'); if(pl) pl.outerHTML=preLink(p,i); }   // 틀리면 🧩 버튼을 눈에 띄게
   const m=box.querySelector('#hm'); if(m) m.textContent=`아직 아니에요 (${h.ha['h'+(i+1)].n}번 시도).${ck.length>1?' 빨간 칸을 다시 생각해 보세요.':''} 힌트를 다시 읽고 종이에 써 보세요.`;
 }
 /* 첫 차시: 힌트 질문을 도저히 모르겠으면 포기 → 정답을 보여 줌 (포인트 없음, 다음 힌트 기다리는 시간은 그대로) */
@@ -841,7 +895,7 @@ function markCheck(){
 function markSummary(){ const S=UI.BS, tok=S.tok||[], mk=S.mk||{}; const f=r=>Object.keys(mk).filter(k=>mk[k].r===r).map(k=>`${mk[k].c||''} ${tok[k]&&tok[k].v||''}`.trim()).join(', ');
   return `🎯 구할 것: ${f('want')} · 📌 아는 것: ${f('know')}`; }
 function parseNum(v){
-  let t=String(v).replace(/[\sπ]|cm²|cm|°|㎠/g,'').replace(/,/g,'').replace(/[－−]/g,'-').replace(/／/g,'/');
+  let t=String(v).replace(/[\sπ]|cm²|cm|°|㎠/g,'').replace(/\((-?\d*\.?\d+)\)/g,'$1').replace(/,/g,'').replace(/[－−]/g,'-').replace(/／/g,'/');
   if(!/^-?\d*\.?\d+(\/\d*\.?\d+)?$/.test(t)) return null;
   const [a,b]=t.split('/'); const x=b==null?+a:(+a)/(+b); return Number.isFinite(x)?x:null;
 }
@@ -1001,6 +1055,7 @@ function mergeRec(a,b){
   for(const k in (b.solved||{})) if(!r.solved[k]) r.solved[k]=b.solved[k];
   for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null){ x.a=y.a; if(y.v) x.v=y.v; if(y.gave) x.gave=true; } if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
   for(const k in (b.bas||{})){ const x=r.bas[k], y=b.bas[k]||{}; if(!x||(y.n||0)>(x.n||0)) r.bas[k]=y; }
+  for(const k in (b.pre||{})){ const x=(r.pre||{})[k], y=b.pre[k]||{}; if(!x||(+y.n||0)>(+x.n||0)||(y.done&&!x.done)) r.pre=Object.assign({},r.pre,{[k]:Object.assign({},x,y,{done:!!((x&&x.done)||y.done)})}); }
   for(const k in (b.vid||{})){ const x=(r.vid||{})[k], y=b.vid[k]||{}; if(!x||(+y.n||0)>(+x.n||0)) r.vid=Object.assign({},r.vid,{[k]:y}); }
   if(b.basDay&&(!r.basDay||(b.basDay.d===r.basDay.d&&(+b.basDay.ok||0)>(+r.basDay.ok||0)))) r.basDay=b.basDay;
   r.resetSeen=Math.max(r.resetSeen||0,b.resetSeen||0);

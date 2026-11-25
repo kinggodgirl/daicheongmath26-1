@@ -18,6 +18,7 @@ const RULES = [            // 학생 화면 '포인트는 이렇게 모아요' �
   {k:'star',  t:'기초 연습 ⭐ (연속 3개)',               p:3},
   {k:'self',  t:'스스로 단계에서 형광펜을 직접 켜고 풀기', p:1},
   {k:'mix',   t:'섞어 풀기 정답 · 핵심 생각 맞히기',      p:1},
+  {k:'pre',   t:'선수지식 연습 정답 (기초마다 최대 6)',   p:1},
 ];
 const PT = {}; RULES.forEach(r=>PT[r.k]=r.p);
 
@@ -42,6 +43,7 @@ function calc(rec, unit){
     const r = (rec.rule||{})[p.id]; if(r && r.ok) n.rule++;
   }
   for(const k in (rec.bas||{})){ const b = rec.bas[k]||{}; n.bas += +b.ok||0; if(b.star) n.star++; n.self += +b.selfN||0; }
+  for(const k in (rec.pre||{})) n.pre += Math.min(6, +(rec.pre[k]||{}).ok||0);
   if(rec.mix) n.mix += (+rec.mix.ok||0) + (+rec.mix.rok||0);
   let total = 0; for(const k in n) total += n[k]*PT[k];
   return {total, n};
