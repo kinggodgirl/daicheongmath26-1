@@ -384,10 +384,16 @@ function genB(hard){
       s2={tag:'2단계', q:`${what}끼리 비교해요. ${what}의 비도 ${p} : ${q}예요. ${p} : ${q} = ${L} : <i class="mv">x</i> 이면 <i class="mv">x</i>는?`, kind:'num', ans:x, suffix:u};
       exp=`[0단계] 🎯 구할 것: ${what} · 📌 아는 것: 중심각 ${a}°, ${what} ${L} ${u}, 중심각 ${b}°<br>[1단계] 중심각의 비 ${a} : ${b} = ${p} : ${q}<br>[2단계] ${what}의 비도 ${p} : ${q} → ${p} : ${q} = ${L} : <i class="mv">x</i>, <i class="mv">x</i> = <b>${x} ${u}</b>`;
     } else {
-      const kTxt= up? `${k}` : FR(1,k);
-      s1={tag:'1단계', q:`중심각끼리 비교해요. ${b}°는 ${a}°의 몇 배인가요? (${b} = ${a} × □)`, kind:'num', ans:up?k:1/k, suffix:'배'};
-      s2={tag:'2단계', q:`${what}끼리 비교해요. ${what}도 중심각과 <b>같은 배</b>가 돼요. ${L} × ${kTxt} = ?`, kind:'num', ans:x, suffix:u};
-      exp=`[0단계] 🎯 구할 것: ${what} · 📌 아는 것: 중심각 ${a}°, ${what} ${L} ${u}, 중심각 ${b}°<br>[1단계] ${b} = ${a} × ${kTxt}<br>[2단계] ${what}도 ${kTxt}배 → ${L} × ${kTxt} = <b>${x} ${u}</b>`;
+      /* 기초: 분수 배는 묻지 않음. 작아지는 경우는 '큰 쪽이 작은 쪽의 몇 배'를 묻고 나누기로 */
+      if(up){
+        s1={tag:'1단계', q:`중심각끼리 비교해요. ${b}°는 ${a}°의 몇 배인가요? (${b} = ${a} × □)`, kind:'num', ans:k, suffix:'배'};
+        s2={tag:'2단계', q:`${what}끼리 비교해요. 중심각이 ${k}배 커졌으니 ${what}도 <b>${k}배</b>가 돼요. ${L} × ${k} = ?`, kind:'num', ans:x, suffix:u};
+        exp=`[0단계] 🎯 구할 것: ${what} · 📌 아는 것: 중심각 ${a}°, ${what} ${L} ${u}, 중심각 ${b}°<br>[1단계] ${b} = ${a} × ${k}<br>[2단계] ${what}도 ${k}배 → ${L} × ${k} = <b>${x} ${u}</b>`;
+      } else {
+        s1={tag:'1단계', q:`중심각끼리 비교해요. 큰 쪽 ${a}°는 작은 쪽 ${b}°의 몇 배인가요? (${a} = ${b} × □)`, kind:'num', ans:k, suffix:'배'};
+        s2={tag:'2단계', q:`${what}끼리 비교해요. 구하는 부채꼴의 중심각 ${b}°는 ${a}°를 <b>${k}로 나눈</b> 크기예요. 그러니 ${what}도 ${k}로 나눠요. ${L} ÷ ${k} = ?`, kind:'num', ans:x, suffix:u};
+        exp=`[0단계] 🎯 구할 것: ${what} · 📌 아는 것: 중심각 ${a}°, ${what} ${L} ${u}, 중심각 ${b}°<br>[1단계] ${a} = ${b} × ${k}, 즉 ${b} = ${a} ÷ ${k}<br>[2단계] ${what}도 ${k}로 나눠요 → ${L} ÷ ${k} = <b>${x} ${u}</b>`;
+      }
     }
     const figOnly=Math.random()<0.4;
     const s0= figOnly? LABEL0([{v:a+'°',c:'중심각',r:'know'},{v:`${L} ${u}`,c:what,r:'know'},{v:b+'°',c:'중심각',r:'know'},{v:`x ${u}`,c:what,r:'want'}]) : STEP0;
