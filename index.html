@@ -45,6 +45,22 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .die.roll{animation:dieroll .12s linear infinite}@keyframes dieroll{0%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}100%{transform:rotate(-12deg)}}
 .stk{display:flex;flex-wrap:wrap;gap:6px}.stk span{font-size:30px;background:#fff7e8;border:2px solid #f0d9ae;border-radius:12px;padding:2px 6px}.stk span small{font-size:13px;font-weight:900;color:#a0661a}
 .freq{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;align-items:end;height:110px}.freq div{background:#f0d9ae;border-radius:6px 6px 0 0;text-align:center;font-size:13px;font-weight:700;position:relative}.freq div b{position:absolute;bottom:-22px;left:0;right:0}
+.bbboard{background:#1f4a35;color:#f4f1e6;border-radius:18px;padding:16px;box-shadow:inset 0 0 0 4px #2e6249}
+.bbboard .muted{color:#c9d8cc}.bbboard .verdict.r{color:#ffd95a}.bbboard .verdict.w{color:#ffb3b3}
+.bbboard button{color:var(--ink)}.bbboard button.acc{color:#fff}
+.bbrule{line-height:1.8;margin-bottom:8px}.bbin{width:110px;font-size:20px;padding:8px;border-radius:10px;border:2px solid #2e6249;text-align:center}
+.bbroom{display:flex;justify-content:space-between;align-items:center;background:#173b2a;border-radius:10px;padding:8px 12px;margin-top:6px}
+.bbcode{font-size:56px;font-weight:900;letter-spacing:8px;color:#ffd95a}
+.bbvs{font-weight:900;font-size:18px;margin-bottom:10px}.bbvs span{color:#ffd95a;margin:0 6px}
+.bbt{display:inline-flex;gap:4px;vertical-align:middle}.bbt i{position:relative;font-style:normal;width:40px;height:46px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;background:#0b1f14;border:2px solid #4f7a63;color:#f4f1e6}
+.bbt i.O{background:#ffd95a;border-color:#ffd95a;color:#1f4a35}.bbt i.A{background:#4a8fe7;border-color:#4a8fe7;color:#fff}.bbt i.X{background:#26332c;border-color:#26332c;color:#7f8f86}.bbt i.w{border-style:dashed}
+.bbt i s{position:absolute;top:0;right:3px;font-size:12px;text-decoration:none}
+.bbkeys{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.bbkeys button{font-size:24px;padding:10px 0;background:#fff}
+.bbtab{width:100%;border-collapse:collapse}.bbtab th{font-size:14px;color:#c9d8cc;text-align:left;padding:4px}.bbtab td{padding:4px;border-top:1px solid #2e6249}.bbtab td.k{color:#c9d8cc;width:44px}
+.bbcand{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;max-width:420px}.bbcand b{text-align:center;color:#c9d8cc}
+.bbcand button{padding:6px 0;font-size:17px;background:#0b1f14;color:#f4f1e6;border:2px solid #4f7a63}.bbcand button.x{color:#4f5d55;text-decoration:line-through;background:#18241e;border-color:#18241e}
+.bbcand i.no{background:repeating-linear-gradient(45deg,#173b2a 0 4px,#24533c 4px 8px);border-radius:6px}
+.bbdet{margin-top:12px}.bbdet summary{cursor:pointer;font-weight:900}.bbset{font-size:20px;font-weight:900;color:#ffd95a;margin-top:8px}
 .ptab{width:100%;border-collapse:collapse;font-size:15px}.ptab td{padding:5px 6px;border-bottom:1px solid var(--line)}.ptab td.r{text-align:right;white-space:nowrap;font-weight:700}
 .phase-h{font-size:23px;font-weight:900;margin:2px 0 4px}
 .phase-d{color:var(--muted);margin-bottom:14px}
@@ -203,6 +219,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
     <button id="navBas" class="bas" onclick="go('bas')">🧱 기초 연습</button>
     <button id="navPts" class="game" onclick="go('pts')">⭐ <b id="ptN">0</b>점</button>
     <button id="navGame" class="game hide" onclick="go('game')">🎲 주사위</button>
+    <button id="navBB" class="game hide" onclick="go('bb')">⚾ 숫자야구</button>
   </div>
   <div id="view"></div>
 </section>
@@ -215,7 +232,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.2;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.3;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
@@ -233,7 +250,7 @@ if(!BT.length) $('navBas').classList.add('hide');   // 기초 연습이 없는 �
 $('hTitle').textContent=U.title; $('hSub').textContent=U.sub; $('mTitle').textContent=U.title; document.title=U.title;
 
 /* ---------- 상태 ---------- */
-let CFG={wait:30, mode:{}, lesson:'review', mix:0, game:0};
+let CFG={wait:30, mode:{}, lesson:'review', mix:0, game:0, bb:0, bbMax:10};
 if(DEMO) CFG.wait=5;
 function emptyRec(){ return {diag:{}, seen:{}, hint:{}, solved:{}, twin:{}, bas:{}, err:{}, rule:{}, game:{used:0,st:{},rolls:[],hit:{}}}; }
 let REC=emptyRec();
@@ -268,7 +285,7 @@ function render(){
   $('navList').classList.toggle('sel', UI.view==='list'||UI.view==='prob');
   $('navBas').classList.toggle('sel', UI.view==='bas'||UI.view==='bt');
   $('navGame').classList.toggle('sel', UI.view==='game'); $('navPts').classList.toggle('sel', UI.view==='pts');
-  $('navGame').classList.toggle('hide', !CFG.game); if(UI.view==='game'&&!CFG.game&&!UI.rolling) UI.view='list'; updPts();
+  $('navGame').classList.toggle('hide', !CFG.game); $('navBB').classList.toggle('hide', !(CFG.bb||(typeof BB!=='undefined'&&BB))||MIRROR); $('navBB').classList.toggle('sel', UI.view==='bb'); if(UI.view==='game'&&!CFG.game&&!UI.rolling) UI.view='list'; updPts();
   const v=$('view');
   if(UI.view==='prob') v.innerHTML=viewProb(PBY[UI.pid]);
   else if(UI.view==='bas') v.innerHTML=viewBas();
@@ -276,6 +293,7 @@ function render(){
   else if(UI.view==='mix') v.innerHTML=viewMix();
   else if(UI.view==='game') v.innerHTML=viewGame();
   else if(UI.view==='pts') v.innerHTML=viewPts();
+  else if(UI.view==='bb') v.innerHTML=viewBB();
   else v.innerHTML=viewList();
   const inp=v.querySelector('input.ans'); if(inp){ inp.focus({preventScroll:true}); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') basSubmitNum(); }); }
   reportLoc(); tick();
@@ -292,6 +310,7 @@ function locText(){
   if(UI.view==='mix') return '섞어 풀기';
   if(UI.view==='game') return '🎲 주사위';
   if(UI.view==='pts') return '⭐ 포인트';
+  if(UI.view==='bb') return '⚾ 숫자야구';
   if(UI.view==='bas') return '기초 연습 고르는 중';
   return '문제 목록';
 }
@@ -732,12 +751,13 @@ function mixSave(){ const M=UI.MX; REC.mix={at:M.at, n:M.qs.filter(q=>q.ans!=nul
 /* ---------- ⭐ 포인트 (학습 기록에서 계산, points.js) ---------- */
 function pts(){ return PTS.calc(REC,U); }
 const arrOf=x=>Array.isArray(x)?x:Object.values(x||{});
-function updPts(){ const q=pts(); $('ptN').textContent=q.total;
-  if(UI.pts!=null&&q.total>UI.pts&&!MIRROR){ const d=document.createElement('div'); d.className='ptfly'; d.textContent=`+${q.total-UI.pts} ⭐`; document.body.appendChild(d); setTimeout(()=>d.remove(),1900); }
-  UI.pts=q.total; }
+function myBal(){ return pts().total+((typeof BANK!=='undefined'&&+BANK.n)||0); }
+function updPts(){ const t=myBal(); $('ptN').textContent=t;
+  if(UI.pts!=null&&t>UI.pts&&!MIRROR){ const d=document.createElement('div'); d.className='ptfly'; d.textContent=`+${t-UI.pts} ⭐`; document.body.appendChild(d); setTimeout(()=>d.remove(),1900); }
+  UI.pts=t; }
 function viewPts(){ const q=pts();
   return `<div class="phase-h">⭐ 나의 학습 포인트</div><div class="phase-d">제대로 공부한 만큼 쌓여요. 힌트를 열거나 ○를 누르는 것만으로는 포인트가 없어요. 직접 풀고 확인해야 쌓여요.</div>
-  <div class="card"><div class="tk" style="font-size:22px;font-weight:900">⭐ ${q.total}점</div><table class="ptab" style="margin-top:8px">${PTS.RULES.map(r=>`<tr><td>${r.t}</td><td class="r">+${r.p}</td><td class="r">${q.n[r.k]?`${q.n[r.k]}번 → ${q.n[r.k]*r.p}점`:'<span class="muted">-</span>'}</td></tr>`).join('')}</table></div>
+  <div class="card"><div class="tk" style="font-size:22px;font-weight:900">⭐ ${myBal()}점</div><table class="ptab" style="margin-top:8px">${PTS.RULES.map(r=>`<tr><td>${r.t}</td><td class="r">+${r.p}</td><td class="r">${q.n[r.k]?`${q.n[r.k]}번 → ${q.n[r.k]*r.p}점`:'<span class="muted">-</span>'}</td></tr>`).join('')}${typeof BANK!=='undefined'&&+BANK.n?`<tr><td>⚾ 숫자야구 대전</td><td></td><td class="r">${BANK.n>0?'+':''}${BANK.n}점</td></tr>`:''}</table></div>
   <div style="margin-top:16px"><button class="ghost" onclick="go('list')">← 문제 목록으로</button></div>`; }
 
 /* ---------- 🎲 주사위 맞히기 (포인트와 따로. 선생님이 열었을 때만) ---------- */
@@ -826,7 +846,7 @@ function applyCfg(c){
   if(c.resetAt && c.resetAt>(REC.resetSeen||0)){   // 선생님이 기록을 초기화함
     REC=emptyRec(); REC.resetSeen=c.resetAt; saveRec(); upload(); toast('선생님이 기록을 새로 시작했어요');
   }
-  CFG={wait:Math.max(0,+c.wait||0), mode:c.mode||{}, lesson:c.lesson==='first'?'first':'review', mix:+c.mix||0, game:c.game===1?1:0};
+  CFG={wait:Math.max(0,+c.wait||0), mode:c.mode||{}, lesson:c.lesson==='first'?'first':'review', mix:+c.mix||0, game:c.game===1?1:0, bb:c.bb===1?1:0, bbMax:Math.max(0,Math.min(100,+c.bbMax||0))};
   document.body.classList.toggle('fig-bold',c.fig==='bold');
   $('pauseOv').classList.toggle('on',!!c.paused); if(c.pauseMsg) $('pauseMsg').textContent=c.pauseMsg;
   const v=+c.ver||0; if(v&&v!==APP_VER&&CL.verWarn!==v){ CL.verWarn=v; const m=v>APP_VER?'⚠ 새 버전이 있어요. 이 화면을 새로고침해 주세요.':'⚠ 선생님 화면이 옛 버전이에요. 선생님께 새로고침을 부탁하세요.'; toast(m,6000); }
@@ -851,6 +871,7 @@ function disconnect(){
   clearTimeout(CL.upT); clearTimeout(CL.joinT);
   if(CL.base){ try{ me().child('uid').off(); me().child('rec/mergedAt').off(); me().child('p').update({online:false}).catch(()=>{}); me().child('p').onDisconnect().cancel().catch(()=>{}); }catch(e){} try{ CL.base.child('cfg').off(); }catch(e){} }
   try{ db&&db.ref('.info/connected').off(); }catch(e){}
+  if(typeof bbOff==='function') bbOff();
   CL.base=null; CL.code=null; setConn(false);
 }
 function connect(code){
@@ -890,6 +911,7 @@ function connect(code){
     /* 선생님이 다른 이름의 기록을 이 이름으로 합치면 받아 옴 */
     me().child('rec/mergedAt').on('value',s=>{ const v=+s.val()||0; if(CL.base!==base||v<=(REC.mergedAt||0)) return;
       me().child('rec').once('value').then(rs=>{ REC=mergeRec(REC,rs.val()); REC.mergedAt=v; saveRec(); upload(); if(UI.view!=='bt') render(); toast('선생님이 기록을 합쳐 주었어요'); }).catch(()=>{}); }, ()=>{});
+    bbOnConnect(base);
     setState(`✔ 수업 ${code}에 연결됨`,true); showMain(); lastLoc=''; reportLoc();
   }).catch(e=>{ if(CL.code!==my) return; clearTimeout(CL.joinT); CL.code=null; CL.base=null; setState('❌ '+(e.ui?e.message:authMsg(e))); });
 }
@@ -913,7 +935,7 @@ function authMsg(e){
 function startMirror(){
   addEventListener('message',e=>{
     if(e.origin!==location.origin||!e.data||e.data.type!=='mirror') return;
-    const d=e.data; REC=Object.assign(emptyRec(), d.rec||{}); CFG={wait:Math.max(0,+(d.cfg&&d.cfg.wait)||0), mode:(d.cfg&&d.cfg.mode)||{}, lesson:d.cfg&&d.cfg.lesson==='first'?'first':'review', mix:+(d.cfg&&d.cfg.mix)||0, game:d.cfg&&d.cfg.game===1?1:0}; document.body.classList.toggle('fig-bold',!!(d.cfg&&d.cfg.fig==='bold'));
+    const d=e.data; REC=Object.assign(emptyRec(), d.rec||{}); CFG={wait:Math.max(0,+(d.cfg&&d.cfg.wait)||0), mode:(d.cfg&&d.cfg.mode)||{}, lesson:d.cfg&&d.cfg.lesson==='first'?'first':'review', mix:+(d.cfg&&d.cfg.mix)||0, game:d.cfg&&d.cfg.game===1?1:0, bb:0, bbMax:10}; document.body.classList.toggle('fig-bold',!!(d.cfg&&d.cfg.fig==='bold'));
     $('who').textContent='👤 '+d.name;
     if(d.loc!=null){   // 학생이 지금 있는 곳으로
       const p=P.find(x=>d.loc.startsWith(x.no)), b=(d.loc.match(/^기초 (\S+)$/)||[])[1];
@@ -938,5 +960,6 @@ function kicked(){ const nm=myName(); goHome(); setState(`'${nm}' 이름이 다�
 })();
 $('myName').addEventListener('change',()=>{ const v=normName($('myName').value); $('myName').value=v; LS.set('ur-name',v); });
 </script>
+<script src="baseball.js" charset="utf-8"></script>
 </body>
 </html>
