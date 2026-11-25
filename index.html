@@ -285,7 +285,7 @@ math-field::part(virtual-keyboard-toggle){color:#7a4fb5}
 <div class="celeb" id="celeb"><div class="cbox"><div class="clot" id="clot"></div><div class="cb"></div><div class="cs"></div></div><div class="conf"></div></div>
 
 <script>
-const APP_VER=20261125.12;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.13;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, TW2=U.twins2||[], CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen, BV=U.basicVideo||{};
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
@@ -475,7 +475,7 @@ function viewProb(p){
       }
       h+=`<div class="muted">힌트를 하나 열고 <b>종이에 다시 풀어 보세요.</b> 그래도 막히면 다음 힌트를 열어요.</div>`+errLine(p)+hintSection(p,s);
       if(UI.causeFor===p.id) h+=`<div style="margin-top:14px;font-weight:900">처음에 왜 막혔나요? (틀렸나요?)</div><div class="causes">${causesOf(p.id).map(c=>`<button onclick="solve('${p.id}','${c.k}')">${c.label}</button>`).join('')}</div>`;
-      else if(UI.cover[p.id]===1) h+=`<div class="cover">📄 <b>풀이를 덮었어요.</b> 이제 풀이를 보지 않고 <b>종이에 처음부터 혼자</b> 다시 써 보세요.<div class="next"><button style="background:var(--o)" onclick="UI.cover['${p.id}']=2;UI.causeFor='${p.id}';render();reveal('.causes')">✔ 혼자 다 썼어요</button> <button class="ghost mini" onclick="UI.cover['${p.id}']=0;render()">풀이 다시 보기</button></div></div>`;
+      else if(UI.cover[p.id]===1) h+=`<div class="cover">📄 <b>풀이를 덮었어요.</b> 이제 풀이를 보지 않고 <b>종이에 처음부터 혼자</b> 다시 써 보세요.<div class="next"><button style="background:var(--o)" onclick="UI.cover['${p.id}']=2;askCause('${p.id}')">✔ 혼자 다 썼어요</button> <button class="ghost mini" onclick="UI.cover['${p.id}']=0;render()">풀이 다시 보기</button></div></div>`;
       else h+=`<div class="next"><button style="background:var(--o)" onclick="readyToSolve('${p.id}')">✔ 이제 풀 수 있어요</button></div>`;
       if(s.lv>=s.n) h+=basicSuggest(p,'힌트를 다 봐도 어렵다면, 기초부터 다져 볼까요?');
     } else {
@@ -573,7 +573,9 @@ function openHint(pid){ const p=PBY[pid]; if(modeOf(pid)==='lock'||waitLeft(pid)
 function openSol(pid){ if(modeOf(pid)!=='all'||waitLeft(pid)) return;
   REC.hint[pid]=Object.assign({},REC.hint[pid],{sol:true}); saveRec(); send({t:'hint',pid,lv:hintLv(pid),sol:true}); render(); reveal('.hcard.sol'); }
 /* 풀이를 본 학생은 풀이를 덮고 혼자 다시 써 본 뒤에 '해결' */
-function readyToSolve(pid){ const solShown=REC.hint[pid]&&REC.hint[pid].sol; if(solShown&&UI.cover[pid]!==2){ UI.cover[pid]=1; render(); reveal('.cover'); return; } UI.causeFor=pid; render(); reveal('.causes'); }
+function readyToSolve(pid){ const solShown=REC.hint[pid]&&REC.hint[pid].sol; if(solShown&&UI.cover[pid]!==2){ UI.cover[pid]=1; render(); reveal('.cover'); return; } askCause(pid); }
+/* 힌트 전에 '어디서 막혔나'를 이미 골랐으면 '왜 막혔나'를 다시 묻지 않고 그 답을 씀 (같은 보기를 두 번 묻지 않기) */
+function askCause(pid){ const k=REC.err&&REC.err[pid]; if(k&&k!=='unsure'&&CBY[k]){ solve(pid,k); return; } UI.causeFor=pid; render(); reveal('.causes'); }
 /* 틀리거나 막힌 학생: 힌트 전에 '어디서부터 달라졌나 / 어디서 막혔나'를 스스로 찾기 */
 function errPickHTML(p,s){
   const q= s.d==='x'? '힌트를 보기 전에 <b>내 풀이</b>를 다시 봐요. 어디서부터 정답과 달라졌나요?' : '힌트를 보기 전에, 어디에서 막혔는지 골라 봐요.';
