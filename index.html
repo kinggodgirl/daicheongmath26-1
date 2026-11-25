@@ -232,7 +232,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.3;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.4;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
 const U=window.UNIT, P=U.problems, TW=U.twins, CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
@@ -454,10 +454,12 @@ function hintCheckHTML(p,i,active){
   const ck=ckOf(p,i); if(!ck) return '';
   const a=hintAns(p.id,i);
   if(a&&a.ok) return `<div class="hdone">✅ 맞았어요: ${ck.map((c,j)=>`${c.l} ${Number.isInteger(c.a)?c.a:esc(String((a.v||[])[j]??c.a))}${/^[°π]/.test(c.u)||!c.u?c.u:' '+c.u}`).join(', ')}</div>`;
+  const ansTxt=()=>ck.map(c=>`${c.l} <b>${Number.isInteger(c.a)?c.a:fmtAns(c.a)}</b>${/^[°π]/.test(c.u)||!c.u?c.u:' '+c.u}`).join(', ');
+  if(a&&a.gave) return `<div class="hdone" style="background:#f3f0ea;border-color:#cdbfa6;color:var(--ink)">🏳 포기했어요. 정답: ${ansTxt()} → 종이에 옮겨 쓰고, 왜 그런지 힌트를 다시 읽어 봐요.</div>`;
   if(!active) return '';
   const last=a&&Array.isArray(a.v)?a.v:[];
   return `<div class="hchk" data-pid="${p.id}" data-i="${i}">${ck.map((c,j)=>`<label>${c.l} <input class="hin" autocomplete="off" placeholder="${c.ph||''}" value="${esc(String(last[j]??''))}" onkeydown="if(event.key==='Enter')checkHint('${p.id}',${i})"> ${c.u}</label>`).join('')}
-    <button class="acc" onclick="checkHint('${p.id}',${i})">답 확인</button>
+    <button class="acc" onclick="checkHint('${p.id}',${i})">답 확인</button>${CFG.lesson==='first'?`<button class="ghost" onclick="giveUpHint('${p.id}',${i})">🏳 포기</button>`:''}
     <div class="hm" id="hm">${a&&a.n?`아직 아니에요 (${a.n}번 시도). 힌트를 다시 읽고 종이에 써 보세요.`:'답을 적고 확인을 누르세요. 맞히면 다음 힌트를 바로 볼 수 있어요.'}</div></div>`;
 }
 function esc(v){ return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -476,6 +478,12 @@ function checkHint(pid,i){
   ins.forEach((x,j)=>{ x.classList.toggle('bad',!oks[j]); x.classList.toggle('good',oks[j]); });
   const m=box.querySelector('#hm'); if(m) m.textContent=`아직 아니에요 (${h.ha['h'+(i+1)].n}번 시도).${ck.length>1?' 빨간 칸을 다시 생각해 보세요.':''} 힌트를 다시 읽고 종이에 써 보세요.`;
 }
+/* 첫 차시: 힌트 질문을 도저히 모르겠으면 포기 → 정답을 보여 줌 (포인트 없음, 다음 힌트 기다리는 시간은 그대로) */
+function fmtAns(x){ for(let d=2;d<=24;d++){ const n=Math.round(x*d); if(Math.abs(n/d-x)<1e-9) return n+'/'+d; } return +x.toFixed(2); }
+function giveUpHint(pid,i){ if(MIRROR) return; const p=PBY[pid], prev=hintAns(pid,i)||{};
+  if(!confirm('포기하면 이 힌트 질문의 정답을 보여 줘요. 포인트는 받지 못해요. 포기할까요?')) return;
+  const h=Object.assign({},REC.hint[pid]); h.ha=Object.assign({},h.ha); h.ha['h'+(i+1)]={v:prev.v||[], ok:false, n:prev.n||0, gave:true};
+  REC.hint[pid]=h; saveRec(); send({t:'hint',pid,lv:hintLv(pid)}); render(); }
 function openHint(pid){ const p=PBY[pid]; if(modeOf(pid)==='lock'||waitLeft(pid)) return;
   const lv=Math.min(p.hints.length,hintLv(pid)+1); REC.hint[pid]=Object.assign({},REC.hint[pid],{lv,t:Date.now()}); saveRec(); send({t:'hint',pid,lv}); render(); reveal('.hcard'); }
 function openSol(pid){ if(modeOf(pid)!=='all'||waitLeft(pid)) return;
@@ -512,11 +520,11 @@ function twinBlock(p,s){
   if(t.inp) h+=twinInputHTML(t,tr);
   else h+=`<div class="chs">${t.ch.map((c,i)=>{ let cls=''; if(done){ if(i===t.ok) cls='right'; else if(i===tr.a) cls='wrong'; } else if(i===pick) cls='sel';
       return `<button class="${cls}" ${done?'disabled style="opacity:1"':''} onclick="UI.twinPick['${t.id}']=${i};render()"><span class="n">${NUM[i]}</span>${c}</button>`; }).join('')}</div>`;
-  if(!done) h+= t.inp? `<div class="next"><button class="acc" onclick="submitTwinNum('${t.id}')">제출 (한 번만)</button><span class="cd">종이에 풀고 답을 적어요 · π는 π 또는 파이, 분수는 56/3π처럼</span></div>`
+  if(!done) h+= t.inp? `<div class="next"><button class="acc" onclick="submitTwinNum('${t.id}')">제출 (한 번만)</button>${CFG.lesson==='first'?`<button class="ghost" onclick="giveUpTwin('${t.id}')">🏳 포기</button>`:''}<span class="cd">종이에 풀고 답을 적어요 · π는 π 또는 파이, 분수는 56/3π처럼</span></div>`
     : `<div class="next"><button class="acc" ${pick==null?'disabled':''} onclick="submitTwin('${t.id}')">제출 (한 번만)</button><span class="cd">종이에 풀고 답을 골라요</span></div>`;
   else {
     h+= tr.a===t.ok? `<div class="verdict r">⭕ 정답이에요! 이 문제는 완성!</div>` : `<div class="verdict w">❌ 아쉬워요</div>`;
-    if(t.inp) h+=`<div class="muted" style="font-weight:700">내 답: ${esc((tr.v||[]).join(t.ratio?' : ':', '))} · 정답: ${t.ch[t.ok]}</div>`;
+    if(t.inp) h+=`<div class="muted" style="font-weight:700">${tr.gave?'🏳 포기했어요':`내 답: ${esc((tr.v||[]).join(t.ratio?' : ':', '))}`} · 정답: ${t.ch[t.ok]}</div>`;
     if(tr.a!==t.ok && REC.diag[p.id]==='o') h+=`<div class="over">🤔 처음엔 <b>○(맞았어요)</b>로 채점했는데 이번엔 달랐어요. 처음 답이 정말 이해해서 맞힌 것이었는지 한 번 더 따져 봐요.</div>`;
     h+=rulePickHTML(p);
     h+=`<div class="exp">${t.exp}</div>`;
@@ -543,6 +551,9 @@ function twinMatch(t,vs){ const got=vs.map(piVal); if(got.some(g=>!g)) return nu
   return t.ch.length; }
 function twinInputHTML(t,tr){ if(tr.a!=null) return '';
   return `<div class="numin" style="flex-wrap:wrap">${t.inp.map((c,j)=>`${c.l?`<span class="sfx">${c.l}</span>`:''}<input class="twin-in" type="text" autocomplete="off" style="width:${t.ratio?70:130}px"><span class="sfx">${c.u||''}</span>`).join('')}</div>`; }
+function giveUpTwin(tid){ const t=TBY[tid]; if(MIRROR||!t||(REC.twin[tid]&&REC.twin[tid].a!=null)) return;
+  if(!confirm('포기하면 정답과 풀이를 보여 줘요. 확인 문제는 틀린 것으로 남아요. 포기할까요?')) return;
+  REC.twin[tid]=Object.assign({},REC.twin[tid],{a:t.ch.length, v:['포기'], gave:true, open:true}); saveRec(); send({t:'twinAns',tid,a:t.ch.length}); render(); reveal('.verdict'); }
 function submitTwinNum(tid){ const t=TBY[tid]; if(!t||(REC.twin[tid]&&REC.twin[tid].a!=null)) return;
   const vs=[...document.querySelectorAll('#view input.twin-in')].map(x=>x.value.trim().slice(0,30)); if(vs.some(v=>!v)){ toast('빈칸을 모두 채워 주세요'); return; }
   const a=twinMatch(t,vs); if(a==null){ toast('수와 π로만 적어 주세요. 예: 4π, 8π-16, 56/3π'); return; }
@@ -832,7 +843,7 @@ function mergeRec(a,b){
   for(const k in (b.hint||{})){ const x=r.hint[k]||{}, y=b.hint[k]||{}; r.hint[k]={lv:Math.max(x.lv||0,y.lv||0), sol:!!(x.sol||y.sol), t:x.t||0};
     const ha=Object.assign({},y.ha,x.ha); for(const q in ha){ const xa=(x.ha||{})[q], ya=(y.ha||{})[q]; if(xa&&ya) ha[q]=(ya.ok&&!xa.ok)||(ya.ok===xa.ok&&(ya.n||0)>(xa.n||0))?ya:xa; } if(Object.keys(ha).length) r.hint[k].ha=ha; }
   for(const k in (b.solved||{})) if(!r.solved[k]) r.solved[k]=b.solved[k];
-  for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null){ x.a=y.a; if(y.v) x.v=y.v; } if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
+  for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null){ x.a=y.a; if(y.v) x.v=y.v; if(y.gave) x.gave=true; } if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
   for(const k in (b.bas||{})){ const x=r.bas[k], y=b.bas[k]||{}; if(!x||(y.n||0)>(x.n||0)) r.bas[k]=y; }
   r.resetSeen=Math.max(r.resetSeen||0,b.resetSeen||0);
   r.mergedAt=Math.max(r.mergedAt||0,+b.mergedAt||0);
