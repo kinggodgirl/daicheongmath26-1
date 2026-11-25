@@ -124,6 +124,16 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .hchk .hm{flex-basis:100%;font-size:14px;color:#7a5a00}
 .hdone{margin-top:8px;font-size:14px;font-weight:700;color:var(--o)}
 .stg{font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;background:#eee;margin-left:6px}
+.vstage{display:flex;justify-content:center;align-items:center;min-height:300px}
+.vfig{width:min(460px,100%);height:auto}
+.vnew{animation:vin .9s ease both}
+@keyframes vin{from{opacity:0}to{opacity:1}}
+.vcap{font-size:22px;text-align:center;font-weight:700;margin:12px 0 10px;min-height:64px;line-height:1.5}
+.vdots{display:flex;justify-content:center;gap:8px;margin-bottom:6px}.vdots i{width:14px;height:14px;border-radius:50%;background:#e6e1d6;cursor:pointer}.vdots i.on{background:#f2a65a}.vdots i.cur{background:#e8590c;transform:scale(1.3)}
+.vctl{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.vsum{width:100%;max-width:560px}.vsum div{font-size:21px;font-weight:800;padding:10px 16px;margin:8px 0;background:#fffaf0;border:2px solid #f0d48a;border-radius:12px;animation:vin .6s both}
+.btype{cursor:pointer}.vbtn{margin-top:10px;background:#fff4e6;border:2px solid #f08c00;color:#d9480f;border-radius:12px;padding:6px 14px;font-weight:800;font-size:15px}.vbtn.seen{background:#fff;border-color:#ced4da;color:#666}
+.vidsug{background:#fff4e6;border-color:#f08c00}
 .dayg{background:#fffaf0;border:2px solid #f0d48a;border-radius:16px;padding:10px 14px 22px;margin:0 0 14px}
 .dayg .dl{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:16px;margin-bottom:8px}.dayg .dl span{font-weight:800;color:#a2700a}
 .dayg .db{position:relative;height:16px;background:#f1e7cf;border-radius:999px}.dayg .db>div{height:100%;background:linear-gradient(90deg,#ffcf4a,#ff9f1c);border-radius:999px;transition:width .5s}
@@ -251,9 +261,9 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="celeb" id="celeb"><div class="cbox"><div class="cb"></div><div class="cs"></div></div><div class="conf"></div></div>
 
 <script>
-const APP_VER=20261125.8;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.9;            // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 if(!window.UNIT||!window.ULIB){ document.body.insertAdjacentHTML('afterbegin','<div style="background:#fbe5e8;color:#cf3f54;padding:16px;font-weight:700;text-align:center">⚠ 단원 파일을 읽지 못했어요. 화면을 새로고침해 보고, 그래도 안 되면 선생님께 알려 주세요.</div>'); throw new Error('unit file not loaded'); }
-const U=window.UNIT, P=U.problems, TW=U.twins, TW2=U.twins2||[], CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen;
+const U=window.UNIT, P=U.problems, TW=U.twins, TW2=U.twins2||[], CAUSE=U.causes, BT=U.basicTypes, BG=U.basicGen, BV=U.basicVideo||{};
 /* 막힌 이유: 문제마다 따로(p.causes) + '잘 모르겠어요'. 없으면 단원 공통 CAUSES */
 const CBY=Object.fromEntries(CAUSE.concat(...P.map(p=>p.causes||[])).map(c=>[c.k,c]));
 function causesOf(pid){ const p=P.find(x=>x.id===pid); return p&&p.causes&&p.causes.length? p.causes.concat(CAUSE.filter(c=>c.k==='unsure')) : CAUSE; }
@@ -300,12 +310,13 @@ function go(v,arg){
   UI.view=v; UI.causeFor=null;
   if(v==='prob') UI.pid=arg;
   if(v==='bas'){ UI.bt=null; UI.BS=null; UI.rec=arg||null; }
+  if(v!=='vid') vidStop();
   if(v==='bt'){ UI.bt=arg; newBasic(); }
   window.scrollTo(0,0); render();
 }
 function render(){
   $('navList').classList.toggle('sel', UI.view==='list'||UI.view==='prob');
-  $('navBas').classList.toggle('sel', UI.view==='bas'||UI.view==='bt');
+  $('navBas').classList.toggle('sel', UI.view==='bas'||UI.view==='bt'||UI.view==='vid');
   $('navGame').classList.toggle('sel', UI.view==='game'); $('navPts').classList.toggle('sel', UI.view==='pts');
   $('navGame').classList.toggle('hide', !CFG.game); $('navBB').classList.toggle('hide', !((typeof bbOpen==='function'&&bbOpen())||(typeof BB!=='undefined'&&BB))||MIRROR); $('navBB').classList.toggle('sel', UI.view==='bb'); if(UI.view==='game'&&!CFG.game&&!UI.rolling) UI.view='list'; updPts();
   const v=$('view');
@@ -316,6 +327,7 @@ function render(){
   else if(UI.view==='game') v.innerHTML=viewGame();
   else if(UI.view==='pts') v.innerHTML=viewPts();
   else if(UI.view==='bb') v.innerHTML=viewBB();
+  else if(UI.view==='vid') v.innerHTML=viewVid();
   else v.innerHTML=viewList();
   const inp=v.querySelector('input.ans'); if(inp){ inp.focus({preventScroll:true}); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') basSubmitNum(); }); }
   reportLoc(); tick();
@@ -331,6 +343,7 @@ function locText(){
     return p.no+' 해결';
   }
   if(UI.view==='bt') return '기초 '+UI.bt;
+  if(UI.view==='vid') return '📺 영상 '+(UI.VD&&UI.VD.k);
   if(UI.view==='mix') return '섞어 풀기';
   if(UI.view==='game') return '🎲 주사위';
   if(UI.view==='pts') return '⭐ 포인트';
@@ -400,7 +413,8 @@ function reflectHTML(){
 /* ---------- 문제 하나 ---------- */
 /* 🔊 읽어 주기: 글을 잘 안 읽는 학생을 위해 문제·힌트를 소리로 (기기의 한국어 음성) */
 const SAYBTN=`<button class="say" title="읽어 주기" onclick="sayEl(this)">🔊</button>`;
-function sayText(t){ try{ t=String(t).replace(/\s+/g,' ').replace(/∠/g,' 각 ').replace(/°/g,'도 ').replace(/π/g,'파이').replace(/cm²/g,' 제곱센티미터').replace(/cm/g,' 센티미터').replace(/∥/g,' 평행 ').replace(/×/g,' 곱하기 ').replace(/−/g,' 빼기 ').replace(/:/g,' 대 ');
+function sayFix(t){ return String(t).replace(/\s+/g,' ').replace(/∠/g,' 각 ').replace(/°/g,'도 ').replace(/π/g,'파이').replace(/cm²/g,' 제곱센티미터').replace(/cm/g,' 센티미터').replace(/∥/g,' 평행 ').replace(/×/g,' 곱하기 ').replace(/−/g,' 빼기 ').replace(/:/g,' 대 ').replace(/÷/g,' 나누기 ').replace(/½/g,' 2분의 1 '); }
+function sayText(t){ try{ t=sayFix(t);
     speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(t); u.lang='ko-KR'; u.rate=0.92; speechSynthesis.speak(u); }catch(e){ toast('이 기기에서는 읽어 주기를 쓸 수 없어요'); } }
 function sayEl(b){ const box=b.closest('.hcard')?.querySelector('.htx')||b.closest('.ptext'); if(!box) return; const c=box.cloneNode(true); c.querySelectorAll('button,.hchk,svg').forEach(x=>x.remove()); sayText(c.textContent); }
 function probBox(p){ const f=p.fig?p.fig():''; return `<div class="pbox ${f?'':'nofig'}"><div class="ptext">${SAYBTN}${p.text}</div>${f?`<div class="figw">${f}</div>`:''}</div>`; }
@@ -616,14 +630,45 @@ function submitTwin(tid){ const a=UI.twinPick[tid]; if(a==null||(REC.twin[tid]&&
   REC.twin[tid]=Object.assign({},REC.twin[tid],{a,open:true}); saveRec(); send({t:'twinAns',tid,a}); render(); reveal('.verdict'); }
 function twinCause(tid,c){ REC.twin[tid]=Object.assign({},REC.twin[tid],{cause:c}); saveRec(); send({t:'twinCause',tid,cause:c}); render(); reveal('.again'); }
 
+/* ---------- 📺 기초 개념 영상: 그림이 한 장면씩 더해지고 기기 음성으로 설명 → 다 보면 그 유형 문제로 ---------- */
+function vidStat(k){ return (REC.vid||{})[k]||null; }
+function goVid(k,ev){ if(ev) ev.stopPropagation(); if(!BV[k]) return; go('vid'); UI.VD={k,i:0,play:true,tok:0}; render(); vidScene(); }
+function vidStop(){ const D=UI.VD; if(D){ D.tok++; clearTimeout(D.t); clearTimeout(D.t2); } try{ speechSynthesis.cancel(); }catch(e){} }
+function vidSvg(sc,i){ let s=i; while(s>0&&!sc[s].clear) s--; let body='';
+  for(let j=s;j<=i;j++) if(sc[j].add) body+=`<g class="${j===i?'vnew':''}">${sc[j].add}</g>`; return body; }
+function viewVid(){ const D=UI.VD; if(!D||!BV[D.k]) return viewBas(); const v=BV[D.k], b=BBY[D.k], sc=v.scenes, x=sc[D.i], last=D.i===sc.length-1;
+  let h=`<div class="phead"><span class="tt" style="font-size:20px;color:var(--ink)">📺 ${v.title}</span><button class="ghost mini" onclick="go('bt','${D.k}')">건너뛰고 문제로</button><button class="ghost mini" onclick="go('bas')">← 유형 고르기</button></div>`;
+  let fig=''; for(let j=D.i;j>=0;j--) if(sc[j].add||sc[j].clear){ fig=vidSvg(sc,j); break; }
+  h+=`<div class="card vid"><div class="vstage">${x.sum?`<div class="vsum">${x.list.map((t,i)=>`<div style="animation-delay:${i*.6}s">✔ ${t}</div>`).join('')}</div>`:`<svg class="vfig" viewBox="0 0 300 260" xmlns="http://www.w3.org/2000/svg">${fig}</svg>`}</div>
+    <div class="vcap">${x.cap}</div>
+    <div class="vdots">${sc.map((_,i)=>`<i class="${i<D.i?'on':i===D.i?'cur':''}" onclick="vidGo(${i})"></i>`).join('')}</div>
+    <div class="vctl"><button class="ghost" onclick="vidGo(${D.i-1})" ${D.i?'':'disabled'}>◀ 이전</button><button class="acc" onclick="vidToggle()">${D.play?'⏸ 멈춤':'▶ 재생'}</button><button class="ghost" onclick="vidGo(${D.i+1})" ${last?'disabled':''}>다음 ▶</button><button class="ghost" onclick="vidGo(0,true)">🔁 처음부터</button><button class="ghost" onclick="UI.mute=!UI.mute;render();vidScene()">${UI.mute?'🔇 소리 켜기':'🔊 소리 끄기'}</button></div>`;
+  if(last) h+=`<div class="next" style="justify-content:center;margin-top:16px"><button class="acc" style="font-size:20px;padding:14px 26px" id="vidEnd" onclick="go('bt','${D.k}')">✅ 다 봤어요 → ${b.name} 문제 풀기</button></div>`;
+  return h+`</div>`; }
+function vidGo(i,restart){ const D=UI.VD; if(!D) return; const n=BV[D.k].scenes.length; D.i=Math.max(0,Math.min(n-1,i)); if(restart) D.play=true; render(); vidScene(); }
+function vidToggle(){ const D=UI.VD; if(!D) return; D.play=!D.play; if(D.play&&D.i===BV[D.k].scenes.length-1) D.i=0; render(); vidScene(); }
+function vidDone(D){ if(D.counted||MIRROR) return; D.counted=true; const x=Object.assign({n:0},vidStat(D.k)); x.n++; x.t=Date.now(); REC.vid=Object.assign({},REC.vid,{[D.k]:x}); saveRec(); send({t:'vid',k:D.k}); }
+function vidScene(){ const D=UI.VD; if(!D) return; clearTimeout(D.t); clearTimeout(D.t2); const sc=BV[D.k].scenes, x=sc[D.i], tok=++D.tok;
+  try{ speechSynthesis.cancel(); }catch(e){}
+  if(D.i===sc.length-1) vidDone(D);
+  if(!D.play) return;
+  const nextFn=()=>{ if(UI.VD!==D||D.tok!==tok||!D.play||UI.view!=='vid') return; if(D.i<sc.length-1){ D.i++; render(); vidScene(); } else { D.play=false; render(); } };
+  const ms=Math.max(3000, x.say.length*170);
+  const t0=Date.now(), minMs=Math.max(2500,x.say.length*90);   /* 음성이 없는 기기에서도 너무 빨리 넘어가지 않게 */
+  let fired=false; const after=()=>{ if(fired) return; fired=true; clearTimeout(D.t2); D.t=setTimeout(nextFn,Math.max(1000,minMs-(Date.now()-t0))); };
+  if(UI.mute||!window.speechSynthesis){ D.t2=setTimeout(after,ms); return; }
+  try{ const u=new SpeechSynthesisUtterance(sayFix(x.say)); u.lang='ko-KR'; u.rate=0.9; u.onend=after; u.onerror=after; speechSynthesis.speak(u); }catch(e){ after(); }
+  D.t2=setTimeout(after, ms+5000);   /* 음성이 끝났다는 신호가 오지 않아도 넘어감 */
+}
+
 /* ---------- 기초 연습 ---------- */
 function bstat(k){ return REC.bas[k]||{n:0,ok:0,streak:0,star:false,recent:[]}; }
 function viewBas(){
   const rec=UI.rec?(U.basicFor||{})[UI.rec]||[]:[];
   let h=`<div class="phase-h">🧱 기초 연습</div><div class="phase-d">1쪽 기초 유형을 반복해서 연습해요. 문제는 풀 때마다 새로 나와요. <b>연속 3개</b>를 맞히면 ⭐! 안내 없이 풀 수 있게 되면 🌱 → 🌿 → 🌳 로 자라요.</div>`+dayBar()+shelfHTML()+`<div class="btypes">`;
   for(const b of BT){ const st=bstat(b.k);
-    h+=`<button class="btype ${rec.includes(b.k)?'rec':''}" onclick="go('bt','${b.k}')"><b>${b.name} ${st.star?'<span class="stars">⭐</span>':''}</b><div class="d">${b.desc}</div>
-      <div class="s">${st.n?`푼 문제 ${st.n} · 맞힌 문제 ${st.ok}`:'아직 안 풀었어요'}${rec.includes(b.k)?' · <span style="color:#7a4fb5">추천</span>':''}</div>${st.stage!=null?stagePath(st):''}</button>`; }
+    h+=`<div role="button" class="btype ${rec.includes(b.k)?'rec':''}" onclick="go('bt','${b.k}')"><b>${b.name} ${st.star?'<span class="stars">⭐</span>':''}</b><div class="d">${b.desc}</div>
+      <div class="s">${st.n?`푼 문제 ${st.n} · 맞힌 문제 ${st.ok}`:'아직 안 풀었어요'}${rec.includes(b.k)?' · <span style="color:#7a4fb5">추천</span>':''}</div>${st.stage!=null?stagePath(st):''}${BV[b.k]?`<button class="vbtn ${vidStat(b.k)?'seen':''}" onclick="goVid('${b.k}',event)">📺 개념 영상${vidStat(b.k)?' ✔ 봤어요':' 먼저 보기'}</button>`:''}</div>`; }
   return h+`</div><div style="margin-top:16px"><button class="ghost" onclick="go('list')">← 문제 목록으로 돌아가기</button></div>`;
 }
 /* 기초 연습 단계 덜어 주기 (0단계가 있는 유형만)
@@ -663,7 +708,8 @@ function choiceBtns(chs,onPick,state){ // state: {done, ok, picked, wide, also}
 }
 function viewBT(){
   const b=BBY[UI.bt], S=UI.BS, it=S.it, st=bstat(UI.bt);
-  let h=`<div class="phead"><span class="tt" style="font-size:20px;color:var(--ink)">🧱 ${b.name}</span>${S.staged?`<span class="stg ${S.stage}">${STAGE_B[stageRank(S.stage)][1]} ${STAGE_TXT[S.stage]}</span>`:''}${streakHTML(st)}<button class="ghost mini" onclick="go('bas')">← 유형 고르기</button></div>`+dayBar(true);
+  let h=`<div class="phead"><span class="tt" style="font-size:20px;color:var(--ink)">🧱 ${b.name}</span>${S.staged?`<span class="stg ${S.stage}">${STAGE_B[stageRank(S.stage)][1]} ${STAGE_TXT[S.stage]}</span>`:''}${streakHTML(st)}${BV[UI.bt]?`<button class="ghost mini" onclick="goVid('${UI.bt}')">📺 영상</button>`:''}<button class="ghost mini" onclick="go('bas')">← 유형 고르기</button></div>`+dayBar(true);
+  if(BV[UI.bt]&&!vidStat(UI.bt)&&!st.n) h+=`<div class="cheer vidsug">📺 처음 푸는 유형이에요. <b>개념 영상</b>(1분 남짓)을 먼저 보면 훨씬 쉬워요. <button class="acc" onclick="goVid('${UI.bt}')">영상 먼저 보기</button></div>`;
   h+=`<div class="card"><div style="text-align:right;margin:-6px 0 4px"><button class="say" style="width:auto;border-radius:14px;padding:2px 10px" onclick="sayText(UI.BS.it.text.replace(/<[^>]+>/g,' '))">🔊 읽어 주기</button></div><div class="pbox ${it.fig?'':'nofig'}"><div class="ptext ${markActive()?'marking':''}">${markText(it.text)}</div>${it.fig?`<div class="figw">${it.fig}</div>`:''}</div>`;
   if(it.kind==='mc'){
     h+=choiceBtns(it.choices,'basPickMC',{done:S.done,ok:it.ok,picked:S.picked,wide:it.wide,also:it.also});
@@ -914,6 +960,8 @@ function mergeRec(a,b){
   for(const k in (b.solved||{})) if(!r.solved[k]) r.solved[k]=b.solved[k];
   for(const k in (b.twin||{})){ const x=Object.assign({},r.twin[k]), y=b.twin[k]||{}; if(y.open) x.open=true; if(x.a==null&&y.a!=null){ x.a=y.a; if(y.v) x.v=y.v; if(y.gave) x.gave=true; } if(!x.cause&&y.cause) x.cause=y.cause; r.twin[k]=x; }
   for(const k in (b.bas||{})){ const x=r.bas[k], y=b.bas[k]||{}; if(!x||(y.n||0)>(x.n||0)) r.bas[k]=y; }
+  for(const k in (b.vid||{})){ const x=(r.vid||{})[k], y=b.vid[k]||{}; if(!x||(+y.n||0)>(+x.n||0)) r.vid=Object.assign({},r.vid,{[k]:y}); }
+  if(b.basDay&&(!r.basDay||(b.basDay.d===r.basDay.d&&(+b.basDay.ok||0)>(+r.basDay.ok||0)))) r.basDay=b.basDay;
   r.resetSeen=Math.max(r.resetSeen||0,b.resetSeen||0);
   r.mergedAt=Math.max(r.mergedAt||0,+b.mergedAt||0);
   r.err=Object.assign({},b.err,r.err); r.rule=Object.assign({},b.rule,r.rule);
