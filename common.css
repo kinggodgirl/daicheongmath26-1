@@ -45,3 +45,8 @@ body:not(.fig-bold) .fig [stroke-dasharray="0.1 5"]{stroke-dasharray:3 3;stroke-
 body:not(.fig-bold) .fig circle[r="5"],body:not(.fig-bold) .fig circle[r="4"]{r:2.6}
 body:not(.fig-bold) .fig [fill="#d4d4d4"]{fill:#e6e6e6}
 body:not(.fig-bold) .fig text{font-size:21px}
+
+/* KaTeX 수식: 본문 글자와 크기를 맞춤 */
+.katex{font-size:1.08em}
+.ptext .katex,.hcard .katex,.exp .katex{font-size:1.12em}
+:root{--ML__static-fonts:true}   /* MathLive가 글꼴을 따로 받지 않고 KaTeX 글꼴을 씀 */

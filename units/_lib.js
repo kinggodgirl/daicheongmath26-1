@@ -12,9 +12,12 @@
    ▶ 문제 만들기: ri(최소,최대) 정수, rnd(배열) 하나 고르기, shuffle(배열), mc(정답,[오답들]) 보기 섞기, fracH(분자,분모) 약분 분수
 ========================================================= */
 (function(){
-const A  = s => `<span class="arc">${s}</span>`;
-const OV = s => `<span class="ov">${s}</span>`;
-const FR = (a,b) => `<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+/* 수식은 KaTeX로 교과서처럼 (KaTeX를 못 읽었으면 예전 방식으로) */
+const TX = x => String(x).replace(/π/g,'\\pi ').replace(/°/g,'^{\\circ}').replace(/[가-힣()]+/g,m=>`\\text{${m}}`);
+const K  = (tex,fb) => { try{ if(window.katex) return katex.renderToString(tex,{throwOnError:false,output:'html'}); }catch(e){} return fb; };
+const A  = s => K(`\\overset{\\frown}{\\mathrm{${s}}}`, `<span class="arc">${s}</span>`);
+const OV = s => K(`\\overline{\\mathrm{${s}}}`, `<span class="ov">${s}</span>`);
+const FR = (a,b) => K(`\\dfrac{${TX(a)}}{${TX(b)}}`, `<span class="fr"><span>${a}</span><span>${b}</span></span>`);
 const I  = s => `<i class="mv">${s}</i>`;
 const PI = 'π';
 
@@ -75,5 +78,5 @@ function mc(correct,wrongs){ const w=[...new Set(wrongs)].filter(x=>x!==correct)
 const BOX='<span class="blank">　　</span>';
 const XI=`<tspan font-style="italic">x</tspan>`;
 
-window.ULIB = {A, OV, FR, I, PI, FONT, GRAY, svg, ln, dot, T, pol, mid, fx, pt, arcTo, dimLine, arrowHead, arcDim, angMark, gcd, rnd, ri, shuffle, fracH, mc, BOX, XI};
+window.ULIB = {K, TX, A, OV, FR, I, PI, FONT, GRAY, svg, ln, dot, T, pol, mid, fx, pt, arcTo, dimLine, arrowHead, arcDim, angMark, gcd, rnd, ri, shuffle, fracH, mc, BOX, XI};
 })();
