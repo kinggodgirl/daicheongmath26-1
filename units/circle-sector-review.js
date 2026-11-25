@@ -359,8 +359,15 @@ const BASIC_GEN={
     if(k==='지름') also[ID_NAMES.indexOf('현')]='맞아요! 지름도 원 위의 두 점을 이은 선분이니까 <b>현</b>이에요. 그중에서 원의 중심을 지나는 현을 특별히 <b>지름</b>이라고 불러요. 더 정확한 이름은 <b>지름</b>!';
     return {text:`원 O에서 <b>굵게 표시한 것</b>의 이름을 고르시오.`, fig:idFig(k), kind:'mc', choices:ID_NAMES.slice(), ok:ID_NAMES.indexOf(ans), also, steps:[], wide:true, exp:ID_EXP[k]};
   },
-  B(){
-    const area=Math.random()<0.35, hard=Math.random()<0.5;   // 쉬움: 배수(100 = 50 × 2) · 어려움: 비(50 : 70)
+  B1(){ return genB(false); },   // 몇 배: 100 = 50 × 2
+  B2(){ return genB(true); },    // 비: 50 : 70 = 5 : 7
+  C(){ return genC(); },
+  D(){ return genD(); }
+};
+/* 중심각끼리 비교 → 호의 길이·넓이 (hard=false: 몇 배, hard=true: 비) */
+function genB(hard){
+  {
+    const area=Math.random()<0.35;
     const gcd=(x,y)=>y?gcd(y,x%y):x;
     let a,b,L,x,p,q,k,up;
     for(;;){
@@ -387,8 +394,10 @@ const BASIC_GEN={
     return {text: figOnly? `그림과 같이 한 원에서 두 부채꼴을 그렸을 때, ${XT}의 값을 구하시오.` : `한 원에서 ${KN('중심각',a+'°',`중심각의 크기가 ${a}°`)}인 부채꼴의 ${KN(what,L+' '+u,`${what}가 ${L} ${u}`)}일 때, ${KN('중심각',b+'°',`중심각의 크기가 ${b}°`)}인 부채꼴의 ${WN(what,`${what}를 구하시오`)}.`,
       fig:twoSectorFig(a,b,`${L} ${u}`,`${XI} ${u}`,area), kind:'num', ans:x, suffix:u,
       steps:[s0, s1, s2], exp};
-  },
-  C(){
+  }
+}
+function genC(){
+  {
     const area=Math.random()<0.5;
     let r,th,coef;
     for(;;){ r=ri(2,12); th=rnd([30,40,45,60,72,80,90,100,120,135,144,150,160,180,200,210,225,240,270]);
@@ -410,8 +419,10 @@ const BASIC_GEN={
         {tag:'3단계', q:`${full}${PI} × ${fOk} = ?`, kind:'num', ans:coef, suffix:`${PI} ${u}`}
       ],
       exp:`원의 ${circ} = ${area?`${PI} × ${r}²`:`2${PI} × ${r}`} = ${full}${PI}, 부채꼴은 원의 ${FR(th,360)} = ${fOk}<br>→ ${full}${PI} × ${fOk} = <b>${coef}${PI} ${u}</b>`};
-  },
-  D(){
+  }
+}
+function genD(){
+  {
     let r,k,th;
     for(;;){ r=ri(3,12); k=ri(2,12); th=180*k/r; if((k*r)%2===0 && th>=30 && th<=300) break; }
     const S=k*r/2;
@@ -428,16 +439,18 @@ const BASIC_GEN={
       ],
       exp:`(넓이) = ${FR(1,2)} × (호의 길이) × (반지름) = ${FR(1,2)} × ${k}${PI} × ${r} = <b>${S}${PI} cm²</b>`};
   }
-};
+}
+
 const BASIC_TYPES=[
   {k:'A1', name:'개념 빈칸', desc:'원·호·현·부채꼴·활꼴의 뜻', steps:[]},
   {k:'A2', name:'그림 보고 이름 고르기', desc:'이건 호일까 현일까? 부채꼴일까 아닐까?', steps:[]},
-  {k:'B',  name:'중심각과 호의 길이', desc:'중심각이 2배면 호의 길이도 2배', rule:'중심각의 비 = 호의 길이(넓이)의 비', steps:['0단계 구할 것·아는 것','1단계 중심각 비교','2단계 호의 길이·넓이 비교']},
+  {k:'B1', name:'중심각 비교 ① 몇 배', desc:'중심각이 2배면 호의 길이·넓이도 2배 (100 = 50 × 2)', rule:'중심각이 몇 배면 호의 길이(넓이)도 몇 배', steps:['0단계 구할 것·아는 것','1단계 중심각이 몇 배','2단계 호의 길이·넓이도 같은 배']},
+  {k:'B2', name:'중심각 비교 ② 비', desc:'몇 배로 딱 안 나눠지면 비로 (50 : 70 = 5 : 7)', rule:'중심각의 비 = 호의 길이(넓이)의 비', steps:['0단계 구할 것·아는 것','1단계 중심각의 비','2단계 호의 길이·넓이의 비']},
   {k:'C',  name:'[반지름, 중심각] → 호의 길이·넓이', desc:'원의 몇 분의 몇 조각인지 구하기', rule:'부채꼴 = 원의 (중심각)/360 조각', steps:['0단계 구할 것·아는 것','1단계 원의 둘레·넓이','2단계 몇 분의 몇','3단계 답']},
   {k:'D',  name:'[반지름, 호의 길이] → 넓이', desc:'½ × 호의 길이 × 반지름', rule:'넓이 = ½ × 호의 길이 × 반지름', steps:['0단계 구할 것·아는 것','1단계 공식','2단계 답']}
 ];
 /* 각 문제에서 막혔을 때 권할 기초 유형 */
-const BASIC_FOR={p1:['B','C'], p2:['C','A1'], p3:['A2','B'], p4:['C','D'], p5:['A2','B'], p6:['C','A2'], p7:['C','D']};
+const BASIC_FOR={p1:['B1','B2','C'], p2:['C','A1'], p3:['A2','B2'], p4:['C','D'], p5:['A2','B1'], p6:['C','A2'], p7:['C','D']};
 
 const CAUSES = [
   {k:'concept', label:'개념을 몰랐어요', short:'개념'},
